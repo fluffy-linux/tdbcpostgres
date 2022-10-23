@@ -414,32 +414,32 @@ static Tcl_Obj* QueryConnectionOption(ConnectionData* cdata,
 				      int optionNum);
 static int ConfigureConnection(ConnectionData* cdata, Tcl_Interp* interp,
 			       int objc, Tcl_Obj *const objv[], int skip);
-static int ConnectionConstructor(ClientData clientData, Tcl_Interp* interp,
+static int ConnectionConstructor(void *clientData, Tcl_Interp* interp,
 				 Tcl_ObjectContext context,
 				 int objc, Tcl_Obj *const objv[]);
-static int ConnectionBegintransactionMethod(ClientData clientData,
+static int ConnectionBegintransactionMethod(void *clientData,
 					    Tcl_Interp* interp,
 					    Tcl_ObjectContext context,
 					    int objc, Tcl_Obj *const objv[]);
-static int ConnectionColumnsMethod(ClientData clientData, Tcl_Interp* interp,
+static int ConnectionColumnsMethod(void *clientData, Tcl_Interp* interp,
 				  Tcl_ObjectContext context,
 				  int objc, Tcl_Obj *const objv[]);
-static int ConnectionCommitMethod(ClientData clientData, Tcl_Interp* interp,
+static int ConnectionCommitMethod(void *clientData, Tcl_Interp* interp,
 				  Tcl_ObjectContext context,
 				  int objc, Tcl_Obj *const objv[]);
-static int ConnectionConfigureMethod(ClientData clientData, Tcl_Interp* interp,
+static int ConnectionConfigureMethod(void *clientData, Tcl_Interp* interp,
 				     Tcl_ObjectContext context,
 				     int objc, Tcl_Obj *const objv[]);
-static int ConnectionRollbackMethod(ClientData clientData, Tcl_Interp* interp,
+static int ConnectionRollbackMethod(void *clientData, Tcl_Interp* interp,
 				    Tcl_ObjectContext context,
 				    int objc, Tcl_Obj *const objv[]);
-static int ConnectionTablesMethod(ClientData clientData, Tcl_Interp* interp,
+static int ConnectionTablesMethod(void *clientData, Tcl_Interp* interp,
 				  Tcl_ObjectContext context,
 				  int objc, Tcl_Obj *const objv[]);
-static void DeleteConnectionMetadata(ClientData clientData);
+static void DeleteConnectionMetadata(void *clientData);
 static void DeleteConnection(ConnectionData* cdata);
-static int CloneConnection(Tcl_Interp* interp, ClientData oldClientData,
-			   ClientData* newClientData);
+static int CloneConnection(Tcl_Interp* interp, void *oldClientData,
+			   void **newClientData);
 
 static char* GenStatementName(ConnectionData* cdata);
 static void UnallocateStatement(PGconn* pgPtr, char* stmtName);
@@ -447,40 +447,40 @@ static StatementData* NewStatement(ConnectionData* cdata);
 static PGresult* PrepareStatement(Tcl_Interp* interp,
 				  StatementData* sdata, char* stmtName);
 static Tcl_Obj* ResultDescToTcl(PGresult* resultDesc, int flags);
-static int StatementConstructor(ClientData clientData, Tcl_Interp* interp,
+static int StatementConstructor(void *clientData, Tcl_Interp* interp,
 				Tcl_ObjectContext context,
 				int objc, Tcl_Obj *const objv[]);
-static int StatementParamtypeMethod(ClientData clientData, Tcl_Interp* interp,
+static int StatementParamtypeMethod(void *clientData, Tcl_Interp* interp,
 				    Tcl_ObjectContext context,
 				    int objc, Tcl_Obj *const objv[]);
-static int StatementParamsMethod(ClientData clientData, Tcl_Interp* interp,
+static int StatementParamsMethod(void *clientData, Tcl_Interp* interp,
 				 Tcl_ObjectContext context,
 				 int objc, Tcl_Obj *const objv[]);
-static void DeleteStatementMetadata(ClientData clientData);
+static void DeleteStatementMetadata(void *clientData);
 static void DeleteStatement(StatementData* sdata);
-static int CloneStatement(Tcl_Interp* interp, ClientData oldClientData,
-			  ClientData* newClientData);
+static int CloneStatement(Tcl_Interp* interp, void *oldClientData,
+			  void **newClientData);
 
-static int ResultSetConstructor(ClientData clientData, Tcl_Interp* interp,
+static int ResultSetConstructor(void *clientData, Tcl_Interp* interp,
 				Tcl_ObjectContext context,
 				int objc, Tcl_Obj *const objv[]);
-static int ResultSetColumnsMethod(ClientData clientData, Tcl_Interp* interp,
+static int ResultSetColumnsMethod(void *clientData, Tcl_Interp* interp,
 				  Tcl_ObjectContext context,
 				  int objc, Tcl_Obj *const objv[]);
-static int ResultSetNextrowMethod(ClientData clientData, Tcl_Interp* interp,
+static int ResultSetNextrowMethod(void *clientData, Tcl_Interp* interp,
 				  Tcl_ObjectContext context,
 				  int objc, Tcl_Obj *const objv[]);
-static int ResultSetRowcountMethod(ClientData clientData, Tcl_Interp* interp,
+static int ResultSetRowcountMethod(void *clientData, Tcl_Interp* interp,
 				   Tcl_ObjectContext context,
 				   int objc, Tcl_Obj *const objv[]);
-static void DeleteResultSetMetadata(ClientData clientData);
+static void DeleteResultSetMetadata(void *clientData);
 static void DeleteResultSet(ResultSetData* rdata);
-static int CloneResultSet(Tcl_Interp* interp, ClientData oldClientData,
-			  ClientData* newClientData);
+static int CloneResultSet(Tcl_Interp* interp, void *oldClientData,
+			  void **newClientData);
 
-static void DeleteCmd(ClientData clientData);
+static void DeleteCmd(void *clientData);
 static int CloneCmd(Tcl_Interp* interp,
-		    ClientData oldMetadata, ClientData* newMetadata);
+		    void *oldMetadata, void **newMetadata);
 static void DeletePerInterpData(PerInterpData* pidata);
 
 /* Metadata type that holds connection data */
@@ -1279,7 +1279,7 @@ ConfigureConnection(
 
 static int
 ConnectionConstructor(
-    ClientData clientData,	/* Environment handle */
+    void *clientData,	/* Environment handle */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context, /* Object context */
     int objc,			/* Parameter count */
@@ -1339,7 +1339,7 @@ ConnectionConstructor(
 
 static int
 ConnectionBegintransactionMethod(
-    ClientData dummy,	/* Unused */
+    void *dummy,	/* Unused */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext objectContext, /* Object context */
     int objc,			/* Parameter count */
@@ -1397,7 +1397,7 @@ ConnectionBegintransactionMethod(
 
 static int
 ConnectionCommitMethod(
-    ClientData dummy,	/* Not used */
+    void *dummy,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext objectContext, /* Object context */
     int objc,			/* Parameter count */
@@ -1455,7 +1455,7 @@ ConnectionCommitMethod(
 
 static int
 ConnectionColumnsMethod(
-    ClientData dummy,	/* Not used */
+    void *dummy,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext objectContext, /* Object context */
     int objc,			/* Parameter count */
@@ -1632,7 +1632,7 @@ ConnectionColumnsMethod(
  */
 
 static int ConnectionConfigureMethod(
-     ClientData dummy,
+     void *dummy,
      Tcl_Interp* interp,
      Tcl_ObjectContext objectContext,
      int objc,
@@ -1673,7 +1673,7 @@ static int ConnectionConfigureMethod(
 
 static int
 ConnectionRollbackMethod(
-    ClientData dummy,	/* Not used */
+    void *dummy,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext objectContext, /* Object context */
     int objc,			/* Parameter count */
@@ -1731,7 +1731,7 @@ ConnectionRollbackMethod(
 
 static int
 ConnectionTablesMethod(
-    ClientData dummy,	/* Not used */
+    void *dummy,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext objectContext, /* Object context */
     int objc,			/* Parameter count */
@@ -1820,7 +1820,7 @@ ConnectionTablesMethod(
 
 static void
 DeleteConnectionMetadata(
-    ClientData clientData	/* Instance data for the connection */
+    void *clientData	/* Instance data for the connection */
 ) {
     DecrConnectionRefCount((ConnectionData*)clientData);
 }
@@ -1858,8 +1858,8 @@ DeleteConnection(
 static int
 CloneConnection(
     Tcl_Interp* interp,		/* Tcl interpreter for error reporting */
-    ClientData metadata,	/* Metadata to be cloned */
-    ClientData* newMetaData	/* Where to put the cloned metadata */
+    void *metadata,	/* Metadata to be cloned */
+    void **newMetaData	/* Where to put the cloned metadata */
 ) {
     (void)metadata;
     (void)newMetaData;
@@ -1887,7 +1887,7 @@ CloneConnection(
 
 static void
 DeleteCmd (
-    ClientData clientData	/* Environment handle */
+    void *clientData	/* Environment handle */
 ) {
     PerInterpData* pidata = (PerInterpData*) clientData;
     DecrPerInterpRefCount(pidata);
@@ -1913,8 +1913,8 @@ DeleteCmd (
 static int
 CloneCmd(
     Tcl_Interp* dummy,		/* Tcl interpreter */
-    ClientData oldClientData,	/* Environment handle to be discarded */
-    ClientData* newClientData	/* New environment handle to be used */
+    void *oldClientData,	/* Environment handle to be discarded */
+    void **newClientData	/* New environment handle to be used */
 ) {
     (void)dummy;
 
@@ -2165,7 +2165,7 @@ ResultDescToTcl(
 
 static int
 StatementConstructor(
-    ClientData dummy,	/* Not used */
+    void *dummy,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
     int objc, 			/* Parameter count */
@@ -2340,7 +2340,7 @@ StatementConstructor(
 
 static int
 StatementParamsMethod(
-    ClientData dummy,	/* Not used */
+    void *dummy,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
     int objc, 			/* Parameter count */
@@ -2427,7 +2427,7 @@ StatementParamsMethod(
 
 static int
 StatementParamtypeMethod(
-    ClientData dummy,	/* Not used */
+    void *dummy,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
     int objc, 			/* Parameter count */
@@ -2559,7 +2559,7 @@ StatementParamtypeMethod(
 
 static void
 DeleteStatementMetadata(
-    ClientData clientData	/* Instance data for the connection */
+    void *clientData	/* Instance data for the connection */
 ) {
     DecrStatementRefCount((StatementData*)clientData);
 }
@@ -2610,8 +2610,8 @@ DeleteStatement(
 static int
 CloneStatement(
     Tcl_Interp* interp,		/* Tcl interpreter for error reporting */
-    ClientData metadata,	/* Metadata to be cloned */
-    ClientData* newMetaData	/* Where to put the cloned metadata */
+    void *metadata,	/* Metadata to be cloned */
+    void **newMetaData	/* Where to put the cloned metadata */
 ) {
     (void)metadata;
     (void)newMetaData;
@@ -2647,7 +2647,7 @@ CloneStatement(
 
 static int
 ResultSetConstructor(
-    ClientData dummy,	/* Not used */
+    void *dummy,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
     int objc, 			/* Parameter count */
@@ -2945,7 +2945,7 @@ ResultSetConstructor(
 
 static int
 ResultSetColumnsMethod(
-    ClientData dummy,	/* Not used */
+    void *dummy,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
     int objc, 			/* Parameter count */
@@ -2997,7 +2997,7 @@ ResultSetColumnsMethod(
 
 static int
 ResultSetNextrowMethod(
-    ClientData clientData,	/* Not used */
+    void *clientData,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
     int objc, 			/* Parameter count */
@@ -3118,7 +3118,7 @@ cleanup:
 
 static void
 DeleteResultSetMetadata(
-    ClientData clientData	/* Instance data for the connection */
+    void *clientData	/* Instance data for the connection */
 ) {
     DecrResultSetRefCount((ResultSetData*)clientData);
 }
@@ -3163,8 +3163,8 @@ DeleteResultSet(
 static int
 CloneResultSet(
     Tcl_Interp* interp,		/* Tcl interpreter for error reporting */
-    ClientData metadata,	/* Metadata to be cloned */
-    ClientData* newMetaData	/* Where to put the cloned metadata */
+    void *metadata,	/* Metadata to be cloned */
+    void **newMetaData	/* Where to put the cloned metadata */
 ) {
     (void)metadata;
     (void)newMetaData;
@@ -3193,7 +3193,7 @@ CloneResultSet(
 
 static int
 ResultSetRowcountMethod(
-    ClientData dummy,	/* Not used */
+    void *dummy,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
     int objc, 			/* Parameter count */
@@ -3353,7 +3353,7 @@ Tdbcpostgres_Init(
 				&isNew);
 	Tcl_Obj* nameObj = Tcl_NewStringObj(dataTypes[i].name, -1);
 	Tcl_IncrRefCount(nameObj);
-	Tcl_SetHashValue(entry, (ClientData) nameObj);
+	Tcl_SetHashValue(entry, (void *) nameObj);
     }
 
 
@@ -3372,7 +3372,7 @@ Tdbcpostgres_Init(
     Tcl_ClassSetConstructor(interp, curClass,
 	    Tcl_NewMethod(interp, curClass, NULL, 1,
 		&ConnectionConstructorType,
-		(ClientData) pidata));
+		(void *) pidata));
 
     /* Attach the methods to the 'connection' class */
 
@@ -3442,12 +3442,12 @@ Tdbcpostgres_Init(
     nameObj = Tcl_NewStringObj("nextlist", -1);
     Tcl_IncrRefCount(nameObj);
     Tcl_NewMethod(interp, curClass, nameObj, 1, &ResultSetNextrowMethodType,
-		  (ClientData) 1);
+		  INT2PTR(1));
     Tcl_DecrRefCount(nameObj);
     nameObj = Tcl_NewStringObj("nextdict", -1);
     Tcl_IncrRefCount(nameObj);
     Tcl_NewMethod(interp, curClass, nameObj, 1, &ResultSetNextrowMethodType,
-		  (ClientData) 0);
+		  INT2PTR(0));
     Tcl_DecrRefCount(nameObj);
 
     /*

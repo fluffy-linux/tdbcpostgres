@@ -23,7 +23,7 @@
 #include <tcl.h>
 #include <tclOO.h>
 #include <tdbc.h>
-
+#include "tdbcPostgresUuid.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -221,7 +221,7 @@ static const struct {
     { "-encoding", TYPE_ENCODING,  0,		CONN_OPT_FLAG_MOD,   NULL},
     { "-isolation", TYPE_ISOLATION, 0,		CONN_OPT_FLAG_MOD,   NULL},
     { "-readonly", TYPE_READONLY,  0,		CONN_OPT_FLAG_MOD,   NULL},
-    { NULL,	   0,		   0,		0,		     NULL}
+    { NULL,	   TYPE_STRING,		   0,		0,		     NULL}
 };
 
 /*
@@ -233,7 +233,7 @@ static const struct {
  */
 
 typedef struct PerInterpData {
-    int refCount;		    /* Reference count */
+    size_t refCount;		    /* Reference count */
     Tcl_Obj* literals[LIT__END];    /* Literal pool */
     Tcl_HashTable typeNumHash;	    /* Lookup table for type numbers */
 } PerInterpData;
@@ -244,7 +244,7 @@ typedef struct PerInterpData {
 #define DecrPerInterpRefCount(x)		\
     do {					\
 	PerInterpData* _pidata = x;		\
-	if ((--(_pidata->refCount)) <= 0) {	\
+	if (_pidata->refCount-- <= 1) {	\
 	    DeletePerInterpData(_pidata);	\
 	}					\
     } while(0)
@@ -258,7 +258,7 @@ typedef struct PerInterpData {
  */
 
 typedef struct ConnectionData {
-    int refCount;		/* Reference count. */
+    size_t refCount;		/* Reference count. */
     PerInterpData* pidata;	/* Per-interpreter data */
     PGconn* pgPtr;		/* Postgres  connection handle */
     int stmtCounter;		/* Counter for naming statements */
@@ -281,7 +281,7 @@ typedef struct ConnectionData {
 #define DecrConnectionRefCount(x)		\
     do {					\
 	ConnectionData* conn = x;		\
-	if ((--(conn->refCount)) <= 0) {	\
+	if (conn->refCount-- <= 1) {	\
 	    DeleteConnection(conn);		\
 	}					\
     } while(0)
@@ -296,7 +296,7 @@ typedef struct ConnectionData {
  */
 
 typedef struct StatementData {
-    int refCount;		/* Reference count */
+    size_t refCount;		/* Reference count */
     ConnectionData* cdata;	/* Data for the connection to which this
 				 * statement pertains. */
     Tcl_Obj* subVars;	        /* List of variables to be substituted, in the
@@ -320,7 +320,7 @@ typedef struct StatementData {
 #define DecrStatementRefCount(x)		\
     do {					\
 	StatementData* stmt = (x);		\
-	if (--(stmt->refCount) <= 0) {		\
+	if (stmt->refCount-- <= 1) {		\
 	    DeleteStatement(stmt);		\
 	}					\
     } while(0)
@@ -355,7 +355,7 @@ typedef struct ParamData {
  */
 
 typedef struct ResultSetData {
-    int refCount;		/* Reference count */
+    size_t refCount;		/* Reference count */
     StatementData* sdata;	/* Statement that generated this result set */
     PGresult* execResult;	/* Structure containing result of prepared statement execution */
     char* stmtName;		/* Name identyfing the statement */
@@ -368,7 +368,7 @@ typedef struct ResultSetData {
 #define DecrResultSetRefCount(x)		\
     do {					\
 	ResultSetData* rs = (x);		\
-	if (--(rs->refCount) <= 0) {		\
+	if (rs->refCount-- <= 1) {		\
 	    DeleteResultSet(rs);		\
 	}					\
     } while(0)
@@ -419,32 +419,32 @@ static Tcl_Obj* QueryConnectionOption(ConnectionData* cdata,
 				      int optionNum);
 static int ConfigureConnection(ConnectionData* cdata, Tcl_Interp* interp,
 			       int objc, Tcl_Obj *const objv[], int skip);
-static int ConnectionConstructor(ClientData clientData, Tcl_Interp* interp,
+static int ConnectionConstructor(void *clientData, Tcl_Interp* interp,
 				 Tcl_ObjectContext context,
 				 int objc, Tcl_Obj *const objv[]);
-static int ConnectionBegintransactionMethod(ClientData clientData,
+static int ConnectionBegintransactionMethod(void *clientData,
 					    Tcl_Interp* interp,
 					    Tcl_ObjectContext context,
 					    int objc, Tcl_Obj *const objv[]);
-static int ConnectionColumnsMethod(ClientData clientData, Tcl_Interp* interp,
+static int ConnectionColumnsMethod(void *clientData, Tcl_Interp* interp,
 				  Tcl_ObjectContext context,
 				  int objc, Tcl_Obj *const objv[]);
-static int ConnectionCommitMethod(ClientData clientData, Tcl_Interp* interp,
+static int ConnectionCommitMethod(void *clientData, Tcl_Interp* interp,
 				  Tcl_ObjectContext context,
 				  int objc, Tcl_Obj *const objv[]);
-static int ConnectionConfigureMethod(ClientData clientData, Tcl_Interp* interp,
+static int ConnectionConfigureMethod(void *clientData, Tcl_Interp* interp,
 				     Tcl_ObjectContext context,
 				     int objc, Tcl_Obj *const objv[]);
-static int ConnectionRollbackMethod(ClientData clientData, Tcl_Interp* interp,
+static int ConnectionRollbackMethod(void *clientData, Tcl_Interp* interp,
 				    Tcl_ObjectContext context,
 				    int objc, Tcl_Obj *const objv[]);
-static int ConnectionTablesMethod(ClientData clientData, Tcl_Interp* interp,
+static int ConnectionTablesMethod(void *clientData, Tcl_Interp* interp,
 				  Tcl_ObjectContext context,
 				  int objc, Tcl_Obj *const objv[]);
-static void DeleteConnectionMetadata(ClientData clientData);
+static void DeleteConnectionMetadata(void *clientData);
 static void DeleteConnection(ConnectionData* cdata);
-static int CloneConnection(Tcl_Interp* interp, ClientData oldClientData,
-			   ClientData* newClientData);
+static int CloneConnection(Tcl_Interp* interp, void *oldClientData,
+			   void **newClientData);
 
 static char* GenStatementName(ConnectionData* cdata);
 static void UnallocateStatement(PGconn* pgPtr, char* stmtName);
@@ -452,40 +452,40 @@ static StatementData* NewStatement(ConnectionData* cdata);
 static PGresult* PrepareStatement(Tcl_Interp* interp,
 				  StatementData* sdata, char* stmtName);
 static Tcl_Obj* ResultDescToTcl(PGresult* resultDesc, int flags);
-static int StatementConstructor(ClientData clientData, Tcl_Interp* interp,
+static int StatementConstructor(void *clientData, Tcl_Interp* interp,
 				Tcl_ObjectContext context,
 				int objc, Tcl_Obj *const objv[]);
-static int StatementParamtypeMethod(ClientData clientData, Tcl_Interp* interp,
+static int StatementParamtypeMethod(void *clientData, Tcl_Interp* interp,
 				    Tcl_ObjectContext context,
 				    int objc, Tcl_Obj *const objv[]);
-static int StatementParamsMethod(ClientData clientData, Tcl_Interp* interp,
+static int StatementParamsMethod(void *clientData, Tcl_Interp* interp,
 				 Tcl_ObjectContext context,
 				 int objc, Tcl_Obj *const objv[]);
-static void DeleteStatementMetadata(ClientData clientData);
+static void DeleteStatementMetadata(void *clientData);
 static void DeleteStatement(StatementData* sdata);
-static int CloneStatement(Tcl_Interp* interp, ClientData oldClientData,
-			  ClientData* newClientData);
+static int CloneStatement(Tcl_Interp* interp, void *oldClientData,
+			  void **newClientData);
 
-static int ResultSetConstructor(ClientData clientData, Tcl_Interp* interp,
+static int ResultSetConstructor(void *clientData, Tcl_Interp* interp,
 				Tcl_ObjectContext context,
 				int objc, Tcl_Obj *const objv[]);
-static int ResultSetColumnsMethod(ClientData clientData, Tcl_Interp* interp,
+static int ResultSetColumnsMethod(void *clientData, Tcl_Interp* interp,
 				  Tcl_ObjectContext context,
 				  int objc, Tcl_Obj *const objv[]);
-static int ResultSetNextrowMethod(ClientData clientData, Tcl_Interp* interp,
+static int ResultSetNextrowMethod(void *clientData, Tcl_Interp* interp,
 				  Tcl_ObjectContext context,
 				  int objc, Tcl_Obj *const objv[]);
-static int ResultSetRowcountMethod(ClientData clientData, Tcl_Interp* interp,
+static int ResultSetRowcountMethod(void *clientData, Tcl_Interp* interp,
 				   Tcl_ObjectContext context,
 				   int objc, Tcl_Obj *const objv[]);
-static void DeleteResultSetMetadata(ClientData clientData);
+static void DeleteResultSetMetadata(void *clientData);
 static void DeleteResultSet(ResultSetData* rdata);
-static int CloneResultSet(Tcl_Interp* interp, ClientData oldClientData,
-			  ClientData* newClientData);
+static int CloneResultSet(Tcl_Interp* interp, void *oldClientData,
+			  void **newClientData);
 
-static void DeleteCmd(ClientData clientData);
+static void DeleteCmd(void *clientData);
 static int CloneCmd(Tcl_Interp* interp,
-		    ClientData oldMetadata, ClientData* newMetadata);
+		    void *oldMetadata, void **newMetadata);
 static void DeletePerInterpData(PerInterpData* pidata);
 
 /* Metadata type that holds connection data */
@@ -703,6 +703,8 @@ static void
 DummyNoticeProcessor(void* clientData,
 		     const PGresult* message)
 {
+    (void)clientData;
+    (void)message;
 }
 
 /*
@@ -792,7 +794,7 @@ TransferPostgresError(
 			     Tcl_NewStringObj("HY000", -1));
     Tcl_ListObjAppendElement(NULL, errorCode, Tcl_NewStringObj("POSTGRES", -1));
     Tcl_ListObjAppendElement(NULL, errorCode,
-			     Tcl_NewIntObj(-1));
+			     Tcl_NewWideIntObj(-1));
     Tcl_SetObjErrorCode(interp, errorCode);
     Tcl_SetObjResult(interp, Tcl_NewStringObj(PQerrorMessage(pgPtr), -1));
 }
@@ -843,7 +845,7 @@ static int TransferResultError(
 	Tcl_ListObjAppendElement(NULL, errorCode,
 				 Tcl_NewStringObj("POSTGRES", -1));
 	Tcl_ListObjAppendElement(NULL, errorCode,
-		Tcl_NewIntObj(error));
+		Tcl_NewWideIntObj(error));
 	Tcl_SetObjErrorCode(interp, errorCode);
 	if (error == PGRES_EMPTY_QUERY) {
 	    Tcl_SetObjResult(interp, Tcl_NewStringObj("empty query", -1));
@@ -1043,7 +1045,8 @@ ConfigureConnection(
     int optionIndex;		/* Index of the current option in
 				 * ConnOptions */
     int optionValue;		/* Integer value of the current option */
-    int i,j;
+    int i;
+    size_t j;
     char portval[10];		/* String representation of port number */
     char * encoding = NULL;	/* Selected encoding name */
     int isolation = ISOL_NONE;	/* Isolation level */
@@ -1140,8 +1143,8 @@ ConfigureConnection(
 	    encoding = Tcl_GetString(objv[i+1]);
 	    break;
 	case TYPE_ISOLATION:
-	    if (Tcl_GetIndexFromObj(interp, objv[i+1], TclIsolationLevels,
-				    "isolation level", TCL_EXACT, &isolation)
+	    if (Tcl_GetIndexFromObjStruct(interp, objv[i+1], TclIsolationLevels,
+				    sizeof(char *), "isolation level", TCL_EXACT, &isolation)
 		!= TCL_OK) {
 		return TCL_ERROR;
 	    }
@@ -1281,7 +1284,7 @@ ConfigureConnection(
 
 static int
 ConnectionConstructor(
-    ClientData clientData,	/* Environment handle */
+    void *clientData,	/* Environment handle */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context, /* Object context */
     int objc,			/* Parameter count */
@@ -1307,7 +1310,7 @@ ConnectionConstructor(
     cdata->isolation = ISOL_NONE;
     cdata->readOnly = 0;
     IncrPerInterpRefCount(pidata);
-    Tcl_ObjectSetMetadata(thisObject, &connectionDataType, (ClientData) cdata);
+    Tcl_ObjectSetMetadata(thisObject, &connectionDataType, cdata);
 
     /* Configure the connection */
 
@@ -1341,7 +1344,7 @@ ConnectionConstructor(
 
 static int
 ConnectionBegintransactionMethod(
-    ClientData clientData,	/* Unused */
+    void *dummy,	/* Unused */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext objectContext, /* Object context */
     int objc,			/* Parameter count */
@@ -1351,6 +1354,7 @@ ConnectionBegintransactionMethod(
 				/* The current connection object */
     ConnectionData* cdata = (ConnectionData*)
 	Tcl_ObjectGetMetadata(thisObject, &connectionDataType);
+    (void)dummy;
 
     /* Check parameters */
 
@@ -1398,7 +1402,7 @@ ConnectionBegintransactionMethod(
 
 static int
 ConnectionCommitMethod(
-    ClientData clientData,	/* Completion type */
+    void *dummy,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext objectContext, /* Object context */
     int objc,			/* Parameter count */
@@ -1409,6 +1413,7 @@ ConnectionCommitMethod(
     ConnectionData* cdata = (ConnectionData*)
 	Tcl_ObjectGetMetadata(thisObject, &connectionDataType);
 				/* Instance data */
+    (void)dummy;
 
     /* Check parameters */
 
@@ -1455,7 +1460,7 @@ ConnectionCommitMethod(
 
 static int
 ConnectionColumnsMethod(
-    ClientData clientData,	/* Completion type */
+    void *dummy,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext objectContext, /* Object context */
     int objc,			/* Parameter count */
@@ -1478,7 +1483,8 @@ ConnectionColumnsMethod(
     Tcl_Obj* name;		/* Name of a column */
     Tcl_Obj** namev;		/* Table schema (optional) and table name. */
     int namec;
-    Tcl_DString ds, *dsPtr = &ds;
+    Tcl_DString ds;
+    (void)dummy;
 
     /* Check parameters */
 
@@ -1493,35 +1499,35 @@ ConnectionColumnsMethod(
 	return TCL_ERROR;
     }
 
-    Tcl_DStringInit(dsPtr);
+    Tcl_DStringInit(&ds);
 
     /* Check if table exists by retreiving one row.
      * The result will be later used to determine column types (oids) */
-    Tcl_DStringAppend(dsPtr, "SELECT * FROM ", -1);
+    Tcl_DStringAppend(&ds, "SELECT * FROM ", -1);
     switch (namec) {
     case 1:                  /* table_name */
-	AppendSQLIdentifier(dsPtr, namev[0]);
+	AppendSQLIdentifier(&ds, namev[0]);
 	break;
     case 2:                  /* table_schema.table_name */
-	AppendSQLIdentifier(dsPtr, namev[0]);
-	Tcl_DStringAppend(dsPtr, ".", 1);
-	AppendSQLIdentifier(dsPtr, namev[1]);
+	AppendSQLIdentifier(&ds, namev[0]);
+	Tcl_DStringAppend(&ds, ".", 1);
+	AppendSQLIdentifier(&ds, namev[1]);
 	break;
     }
-    Tcl_DStringAppend(dsPtr, " LIMIT 0", -1);
+    Tcl_DStringAppend(&ds, " LIMIT 0", -1);
 
 
-    if (ExecSimpleQuery(interp, cdata->pgPtr, Tcl_DStringValue(dsPtr),
+    if (ExecSimpleQuery(interp, cdata->pgPtr, Tcl_DStringValue(&ds),
 			&resType) != TCL_OK) {
-	Tcl_DStringFree(dsPtr);
+	Tcl_DStringFree(&ds);
 	return TCL_ERROR;
     }
 
-    Tcl_DStringSetLength(dsPtr, 0);
+    Tcl_DStringSetLength(&ds, 0);
 
     /* Retreive column attributes */
 
-    Tcl_DStringAppend(dsPtr, "SELECT "
+    Tcl_DStringAppend(&ds, "SELECT "
 	"  column_name,"
 	"  numeric_precision,"
 	"  character_maximum_length,"
@@ -1531,25 +1537,25 @@ ConnectionColumnsMethod(
 
     switch (namec) {
     case 1:
-	Tcl_DStringAppend(dsPtr, " WHERE table_name=", -1);
-	AppendSQLStringConstant(dsPtr, namev[0]);
+	Tcl_DStringAppend(&ds, " WHERE table_name=", -1);
+	AppendSQLStringConstant(&ds, namev[0]);
 	break;
     case 2:
-	Tcl_DStringAppend(dsPtr, " WHERE table_schema=", -1);
-	AppendSQLStringConstant(dsPtr, namev[0]);
-	Tcl_DStringAppend(dsPtr, " AND table_name=", -1);
-	AppendSQLStringConstant(dsPtr, namev[1]);
+	Tcl_DStringAppend(&ds, " WHERE table_schema=", -1);
+	AppendSQLStringConstant(&ds, namev[0]);
+	Tcl_DStringAppend(&ds, " AND table_name=", -1);
+	AppendSQLStringConstant(&ds, namev[1]);
 	break;
     }
- 
+
     if (objc == 4) {
-	Tcl_DStringAppend(dsPtr, " AND column_name LIKE ", -1);
-	AppendSQLStringConstant(dsPtr, objv[3]);
+	Tcl_DStringAppend(&ds, " AND column_name LIKE ", -1);
+	AppendSQLStringConstant(&ds, objv[3]);
     }
 
     if (ExecSimpleQuery(interp, cdata->pgPtr,
-			Tcl_DStringValue(dsPtr), &res) != TCL_OK) {
-	Tcl_DStringFree(dsPtr);
+			Tcl_DStringValue(&ds), &res) != TCL_OK) {
+	Tcl_DStringFree(&ds);
 	PQclear(resType);
 	return TCL_ERROR;
     } else {
@@ -1611,12 +1617,12 @@ ConnectionColumnsMethod(
 	    /* 4 is is_nullable column number */
 
 	    Tcl_DictObjPut(NULL, attrs, literals[LIT_NULLABLE],
-		    Tcl_NewIntObj(strcmp("YES",
+		    Tcl_NewWideIntObj(strcmp("YES",
 			    PQgetvalue(res, i, 4)) == 0));
 	    Tcl_DictObjPut(NULL, retval, name, attrs);
 	}
 
-	Tcl_DStringFree(dsPtr);
+	Tcl_DStringFree(&ds);
 	Tcl_SetObjResult(interp, retval);
 	Tcl_DecrRefCount(retval);
 	PQclear(resType);
@@ -1659,7 +1665,7 @@ ConnectionColumnsMethod(
  */
 
 static int ConnectionConfigureMethod(
-     ClientData clientData,
+     void *dummy,
      Tcl_Interp* interp,
      Tcl_ObjectContext objectContext,
      int objc,
@@ -1672,6 +1678,8 @@ static int ConnectionConfigureMethod(
     ConnectionData* cdata = (ConnectionData*)
 	Tcl_ObjectGetMetadata(thisObject, &connectionDataType);
 				/* Instance data */
+    (void)dummy;
+
     return ConfigureConnection(cdata, interp, objc, objv, skip);
 }
 
@@ -1698,7 +1706,7 @@ static int ConnectionConfigureMethod(
 
 static int
 ConnectionRollbackMethod(
-    ClientData clientData,	/* Completion type */
+    void *dummy,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext objectContext, /* Object context */
     int objc,			/* Parameter count */
@@ -1709,6 +1717,7 @@ ConnectionRollbackMethod(
     ConnectionData* cdata = (ConnectionData*)
 	Tcl_ObjectGetMetadata(thisObject, &connectionDataType);
 				/* Instance data */
+    (void)dummy;
 
     /* Check parameters */
 
@@ -1755,7 +1764,7 @@ ConnectionRollbackMethod(
 
 static int
 ConnectionTablesMethod(
-    ClientData clientData,	/* Completion type */
+    void *dummy,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext objectContext, /* Object context */
     int objc,			/* Parameter count */
@@ -1774,9 +1783,10 @@ ConnectionTablesMethod(
     int i;
     Tcl_Obj** namev;		/* Optional schema name and table name pattern */
     int namec;
-    Tcl_DString ds, *dsPtr = &ds;
+    Tcl_DString ds;
     Tcl_Obj *schemanameObj = NULL;
     Tcl_Obj *tablepatternObj = NULL;
+    (void)dummy;
 
     /* Check parameters */
 
@@ -1802,31 +1812,31 @@ ConnectionTablesMethod(
 	}
     }
 
-    Tcl_DStringInit(dsPtr);
-    Tcl_DStringAppend(dsPtr,
+    Tcl_DStringInit(&ds);
+    Tcl_DStringAppend(&ds,
 		      "SELECT tablename FROM pg_tables",
 		      -1); /* SQL query for table list */
 
     if (schemanameObj) {
-	Tcl_DStringAppend(dsPtr, " WHERE schemaname=", -1);
-	AppendSQLStringConstant(dsPtr, schemanameObj);
+	Tcl_DStringAppend(&ds, " WHERE schemaname=", -1);
+	AppendSQLStringConstant(&ds, schemanameObj);
     } else {
-	Tcl_DStringAppend(dsPtr, " WHERE schemaname='public'", -1);
+	Tcl_DStringAppend(&ds, " WHERE schemaname='public'", -1);
     }
 
     if (tablepatternObj) {
-	Tcl_DStringAppend(dsPtr, " AND tablename LIKE ", -1);
-	AppendSQLStringConstant(dsPtr, tablepatternObj);
+	Tcl_DStringAppend(&ds, " AND tablename LIKE ", -1);
+	AppendSQLStringConstant(&ds, tablepatternObj);
     }
 
     /* Retrieve the table list */
 
-    if (ExecSimpleQuery(interp, cdata ->pgPtr, Tcl_DStringValue(dsPtr),
+    if (ExecSimpleQuery(interp, cdata ->pgPtr, Tcl_DStringValue(&ds),
 			&res) != TCL_OK) {
-	Tcl_DStringFree(dsPtr);
+	Tcl_DStringFree(&ds);
 	return TCL_ERROR;
     }
-    Tcl_DStringFree(dsPtr);
+    Tcl_DStringFree(&ds);
 
     /* Iterate through the tuples and make the Tcl result */
 
@@ -1866,7 +1876,7 @@ ConnectionTablesMethod(
 
 static void
 DeleteConnectionMetadata(
-    ClientData clientData	/* Instance data for the connection */
+    void *clientData	/* Instance data for the connection */
 ) {
     DecrConnectionRefCount((ConnectionData*)clientData);
 }
@@ -1879,7 +1889,7 @@ DeleteConnection(
 	PQfinish(cdata->pgPtr);
     }
     DecrPerInterpRefCount(cdata->pidata);
-    ckfree((char*) cdata);
+    ckfree(cdata);
 }
 
 /*
@@ -1904,9 +1914,12 @@ DeleteConnection(
 static int
 CloneConnection(
     Tcl_Interp* interp,		/* Tcl interpreter for error reporting */
-    ClientData metadata,	/* Metadata to be cloned */
-    ClientData* newMetaData	/* Where to put the cloned metadata */
+    void *metadata,	/* Metadata to be cloned */
+    void **newMetaData	/* Where to put the cloned metadata */
 ) {
+    (void)metadata;
+    (void)newMetaData;
+
     Tcl_SetObjResult(interp,
 		     Tcl_NewStringObj("Postgres connections are not clonable",
 				      -1));
@@ -1930,7 +1943,7 @@ CloneConnection(
 
 static void
 DeleteCmd (
-    ClientData clientData	/* Environment handle */
+    void *clientData	/* Environment handle */
 ) {
     PerInterpData* pidata = (PerInterpData*) clientData;
     DecrPerInterpRefCount(pidata);
@@ -1955,10 +1968,12 @@ DeleteCmd (
 
 static int
 CloneCmd(
-    Tcl_Interp* interp,		/* Tcl interpreter */
-    ClientData oldClientData,	/* Environment handle to be discarded */
-    ClientData* newClientData	/* New environment handle to be used */
+    Tcl_Interp* dummy,		/* Tcl interpreter */
+    void *oldClientData,	/* Environment handle to be discarded */
+    void **newClientData	/* New environment handle to be used */
 ) {
+    (void)dummy;
+
     *newClientData = oldClientData;
     return TCL_OK;
 }
@@ -1984,7 +1999,7 @@ GenStatementName(
     char* retval;
     cdata->stmtCounter += 1;
     snprintf(stmtName, 30, "statement%d", cdata->stmtCounter);
-    retval = ckalloc(strlen(stmtName) + 1);
+    retval = (char *)ckalloc(strlen(stmtName) + 1);
     strcpy(retval, stmtName);
     return retval;
 }
@@ -2148,8 +2163,10 @@ ResultDescToTcl(
 	unsigned int fieldCount = PQnfields(result);
 	unsigned int i;
 	char numbuf[16];
+	(void)flags;
+
 	for (i = 0; i < fieldCount; ++i) {
-	    int new;
+	    int isNew;
 	    int count = 1;
 	    Tcl_Obj* nameObj;
 	    Tcl_HashEntry* entry;
@@ -2157,15 +2174,15 @@ ResultDescToTcl(
 	    nameObj = Tcl_NewStringObj(fieldName, -1);
 	    Tcl_IncrRefCount(nameObj);
 	    entry =
-		Tcl_CreateHashEntry(&names, fieldName, &new);
-	    while (!new) {
+		Tcl_CreateHashEntry(&names, fieldName, &isNew);
+	    while (!isNew) {
 	        count = PTR2INT(Tcl_GetHashValue(entry));
 		++count;
 		Tcl_SetHashValue(entry, INT2PTR(count));
 		sprintf(numbuf, "#%d", count);
 		Tcl_AppendToObj(nameObj, numbuf, -1);
 		entry = Tcl_CreateHashEntry(&names, Tcl_GetString(nameObj),
-					    &new);
+					    &isNew);
 	    }
 	    Tcl_SetHashValue(entry, INT2PTR(count));
 	    Tcl_ListObjAppendElement(NULL, retval, nameObj);
@@ -2204,7 +2221,7 @@ ResultDescToTcl(
 
 static int
 StatementConstructor(
-    ClientData clientData,	/* Not used */
+    void *dummy,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
     int objc, 			/* Parameter count */
@@ -2227,7 +2244,8 @@ StatementConstructor(
     int tokenLen;		/* Length of a token */
     PGresult* res;		/* Temporary result of libpq calls */
     char tmpstr[30];		/* Temporary array for strings */
-    int i,j;
+    int i, j;
+    (void)dummy;
 
 
     /* Find the connection object, and get its data. */
@@ -2341,7 +2359,7 @@ StatementConstructor(
 
     /* Attach the current statement data as metadata to the current object */
 
-    Tcl_ObjectSetMetadata(thisObject, &statementDataType, (ClientData) sdata);
+    Tcl_ObjectSetMetadata(thisObject, &statementDataType, sdata);
 
     return TCL_OK;
 
@@ -2378,7 +2396,7 @@ StatementConstructor(
 
 static int
 StatementParamsMethod(
-    ClientData clientData,	/* Not used */
+    void *dummy,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
     int objc, 			/* Parameter count */
@@ -2398,6 +2416,7 @@ StatementParamsMethod(
     Tcl_Obj* retVal;		/* Return value from this command */
     Tcl_HashEntry* typeHashEntry;
     int i;
+    (void)dummy;
 
     if (objc != 2) {
 	Tcl_WrongNumArgs(interp, 2, objv, "");
@@ -2433,9 +2452,9 @@ StatementParamsMethod(
 	    Tcl_DictObjPut(NULL, paramDesc, literals[LIT_TYPE], dataTypeName);
 	}
 	Tcl_DictObjPut(NULL, paramDesc, literals[LIT_PRECISION],
-		       Tcl_NewIntObj(sdata->params[i].precision));
+		       Tcl_NewWideIntObj(sdata->params[i].precision));
 	Tcl_DictObjPut(NULL, paramDesc, literals[LIT_SCALE],
-		       Tcl_NewIntObj(sdata->params[i].scale));
+		       Tcl_NewWideIntObj(sdata->params[i].scale));
 	Tcl_DictObjPut(NULL, retVal, paramName, paramDesc);
     }
 
@@ -2464,7 +2483,7 @@ StatementParamsMethod(
 
 static int
 StatementParamtypeMethod(
-    ClientData clientData,	/* Not used */
+    void *dummy,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
     int objc, 			/* Parameter count */
@@ -2497,6 +2516,7 @@ StatementParamtypeMethod(
     Tcl_Obj* errorObj;		/* Error message */
 
     int i;
+    (void)dummy;
 
     /* Check parameters */
 
@@ -2595,7 +2615,7 @@ StatementParamtypeMethod(
 
 static void
 DeleteStatementMetadata(
-    ClientData clientData	/* Instance data for the connection */
+    void *clientData	/* Instance data for the connection */
 ) {
     DecrStatementRefCount((StatementData*)clientData);
 }
@@ -2614,14 +2634,14 @@ DeleteStatement(
 	Tcl_DecrRefCount(sdata->nativeSql);
     }
     if (sdata->params != NULL) {
-	ckfree((char*)sdata->params);
+	ckfree(sdata->params);
     }
     if (sdata->paramDataTypes != NULL) {
-	ckfree((char*)sdata->paramDataTypes);
+	ckfree(sdata->paramDataTypes);
     }
     Tcl_DecrRefCount(sdata->subVars);
     DecrConnectionRefCount(sdata->cdata);
-    ckfree((char*)sdata);
+    ckfree(sdata);
 }
 
 /*
@@ -2646,9 +2666,12 @@ DeleteStatement(
 static int
 CloneStatement(
     Tcl_Interp* interp,		/* Tcl interpreter for error reporting */
-    ClientData metadata,	/* Metadata to be cloned */
-    ClientData* newMetaData	/* Where to put the cloned metadata */
+    void *metadata,	/* Metadata to be cloned */
+    void **newMetaData	/* Where to put the cloned metadata */
 ) {
+    (void)metadata;
+    (void)newMetaData;
+
     Tcl_SetObjResult(interp,
 		     Tcl_NewStringObj("Postgres statements are not clonable",
 				      -1));
@@ -2680,7 +2703,7 @@ CloneStatement(
 
 static int
 ResultSetConstructor(
-    ClientData clientData,	/* Not used */
+    void *dummy,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
     int objc, 			/* Parameter count */
@@ -2711,6 +2734,7 @@ ResultSetConstructor(
     PGresult* res;		/* Temporary result */
     int i;
     int status = TCL_ERROR;	/* Return status */
+    (void)dummy;
 
     /* Check parameter count */
 
@@ -2746,7 +2770,7 @@ ResultSetConstructor(
     rdata->execResult = NULL;
     rdata->rowCount = 0;
     IncrStatementRefCount(sdata);
-    Tcl_ObjectSetMetadata(thisObject, &resultSetDataType, (ClientData) rdata);
+    Tcl_ObjectSetMetadata(thisObject, &resultSetDataType, rdata);
 
     /*
      * Find a statement handle that we can use to execute the SQL code.
@@ -2795,7 +2819,7 @@ ResultSetConstructor(
     paramValues = (const char**) ckalloc(sdata->nParams * sizeof(char* ));
     paramLengths = (int*) ckalloc(sdata->nParams * sizeof(int*));
     paramFormats = (int*) ckalloc(sdata->nParams * sizeof(int*));
-    paramNeedsFreeing = ckalloc(sdata->nParams);
+    paramNeedsFreeing = (char *)ckalloc(sdata->nParams);
     paramTempObjs = (Tcl_Obj**) ckalloc(sdata->nParams * sizeof(Tcl_Obj*));
 
     memset(paramNeedsFreeing, 0, sdata->nParams);
@@ -2828,12 +2852,12 @@ ResultSetConstructor(
 
 	    switch (sdata->paramDataTypes[i]) {
 	    case INT2OID:
-		bufPtr = ckalloc(sizeof(int));
+		bufPtr = (char *)ckalloc(sizeof(int));
 		if (Tcl_GetIntFromObj(interp, paramValObj,
 				      (int*) bufPtr) != TCL_OK) {
 		    goto freeParamTables;
 		}
-		paramValues[i]=ckalloc(sizeof(int16_t));
+		paramValues[i] = (char *)ckalloc(sizeof(int16_t));
 		paramNeedsFreeing[i] = 1;
 		tmp16 = *(int*) bufPtr;
 		ckfree(bufPtr);
@@ -2843,12 +2867,12 @@ ResultSetConstructor(
 		break;
 
 	    case INT4OID:
-		bufPtr = ckalloc(sizeof(long));
+		bufPtr = (char *)ckalloc(sizeof(long));
 		if (Tcl_GetLongFromObj(interp, paramValObj,
 				       (long*) bufPtr) != TCL_OK) {
 		    goto freeParamTables;
 		}
-		paramValues[i]=ckalloc(sizeof(int32_t));
+		paramValues[i] = (char *)ckalloc(sizeof(int32_t));
 		paramNeedsFreeing[i] = 1;
 		tmp32 = *(long*) bufPtr;
 		ckfree(bufPtr);
@@ -2942,18 +2966,18 @@ ResultSetConstructor(
  freeParamTables:
     for (i = 0; i < sdata->nParams; ++i) {
 	if (paramNeedsFreeing[i]) {
-	    ckfree((char*) paramValues[i]);
+	    ckfree((void *)paramValues[i]);
 	}
 	if (paramTempObjs[i] != NULL) {
 	    Tcl_DecrRefCount(paramTempObjs[i]);
 	}
     }
 
-    ckfree((char*)paramValues);
-    ckfree((char*)paramLengths);
-    ckfree((char*)paramFormats);
-    ckfree((char*)paramNeedsFreeing);
-    ckfree((char*)paramTempObjs);
+    ckfree(paramValues);
+    ckfree(paramLengths);
+    ckfree(paramFormats);
+    ckfree(paramNeedsFreeing);
+    ckfree(paramTempObjs);
 
     return status;
 
@@ -2977,7 +3001,7 @@ ResultSetConstructor(
 
 static int
 ResultSetColumnsMethod(
-    ClientData clientData,	/* Not used */
+    void *dummy,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
     int objc, 			/* Parameter count */
@@ -2988,6 +3012,7 @@ ResultSetColumnsMethod(
     ResultSetData* rdata = (ResultSetData*)
 	Tcl_ObjectGetMetadata(thisObject, &resultSetDataType);
     StatementData* sdata = (StatementData*) rdata->sdata;
+    (void)dummy;
 
     if (objc != 2) {
 	Tcl_WrongNumArgs(interp, 2, objv, "?pattern?");
@@ -3028,7 +3053,7 @@ ResultSetColumnsMethod(
 
 static int
 ResultSetNextrowMethod(
-    ClientData clientData,	/* Not used */
+    void *clientData,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
     int objc, 			/* Parameter count */
@@ -3149,7 +3174,7 @@ cleanup:
 
 static void
 DeleteResultSetMetadata(
-    ClientData clientData	/* Instance data for the connection */
+    void *clientData	/* Instance data for the connection */
 ) {
     DecrResultSetRefCount((ResultSetData*)clientData);
 }
@@ -3171,7 +3196,7 @@ DeleteResultSet(
 	PQclear(rdata->execResult);
     }
     DecrStatementRefCount(rdata->sdata);
-    ckfree((char*)rdata);
+    ckfree(rdata);
 }
 
 /*
@@ -3194,9 +3219,12 @@ DeleteResultSet(
 static int
 CloneResultSet(
     Tcl_Interp* interp,		/* Tcl interpreter for error reporting */
-    ClientData metadata,	/* Metadata to be cloned */
-    ClientData* newMetaData	/* Where to put the cloned metadata */
+    void *metadata,	/* Metadata to be cloned */
+    void **newMetaData	/* Where to put the cloned metadata */
 ) {
+    (void)metadata;
+    (void)newMetaData;
+
     Tcl_SetObjResult(interp,
 		     Tcl_NewStringObj("Postgres result sets are not clonable",
 				      -1));
@@ -3221,7 +3249,7 @@ CloneResultSet(
 
 static int
 ResultSetRowcountMethod(
-    ClientData clientData,	/* Not used */
+    void *dummy,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
     int objc, 			/* Parameter count */
@@ -3238,6 +3266,7 @@ ResultSetRowcountMethod(
     ConnectionData* cdata = sdata->cdata;
     PerInterpData* pidata = cdata->pidata; /* Per-interp data */
     Tcl_Obj** literals = pidata->literals; /* Literal pool */
+    (void)dummy;
 
     if (objc != 2) {
 	Tcl_WrongNumArgs(interp, 2, objv, "");
@@ -3268,7 +3297,15 @@ ResultSetRowcountMethod(
  *-----------------------------------------------------------------------------
  */
 
-extern DLLEXPORT int
+#ifndef STRINGIFY
+#  define STRINGIFY(x) STRINGIFY1(x)
+#  define STRINGIFY1(x) #x
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif  /* __cplusplus */
+DLLEXPORT int
 Tdbcpostgres_Init(
     Tcl_Interp* interp		/* Tcl interpreter */
 ) {
@@ -3278,6 +3315,7 @@ Tdbcpostgres_Init(
     Tcl_Object curClassObject;  /* Tcl_Object representing the current class */
     Tcl_Class curClass;		/* Tcl_Class representing the current class */
     int i;
+    Tcl_CmdInfo info;
 
     if (Tcl_InitStubs(interp, TCL_VERSION, 0) == NULL) {
 	return TCL_ERROR;
@@ -3289,9 +3327,66 @@ Tdbcpostgres_Init(
 	return TCL_ERROR;
     }
 
+    if (Tcl_GetCommandInfo(interp, "::tcl::build-info", &info)) {
+	Tcl_CreateObjCommand(interp, "::tdbc::postgres::build-info",
+		info.objProc, (void *)(
+		    PACKAGE_VERSION "+" STRINGIFY(TDBC_POSTGRES_VERSION_UUID)
+#if defined(__clang__) && defined(__clang_major__)
+			    ".clang-" STRINGIFY(__clang_major__)
+#if __clang_minor__ < 10
+			    "0"
+#endif
+			    STRINGIFY(__clang_minor__)
+#endif
+#if defined(__cplusplus) && !defined(__OBJC__)
+			    ".cplusplus"
+#endif
+#ifndef NDEBUG
+			    ".debug"
+#endif
+#if !defined(__clang__) && !defined(__INTEL_COMPILER) && defined(__GNUC__)
+			    ".gcc-" STRINGIFY(__GNUC__)
+#if __GNUC_MINOR__ < 10
+			    "0"
+#endif
+			    STRINGIFY(__GNUC_MINOR__)
+#endif
+#ifdef __INTEL_COMPILER
+			    ".icc-" STRINGIFY(__INTEL_COMPILER)
+#endif
+#ifdef TCL_MEM_DEBUG
+			    ".memdebug"
+#endif
+#if defined(_MSC_VER)
+			    ".msvc-" STRINGIFY(_MSC_VER)
+#endif
+#ifdef USE_NMAKE
+			    ".nmake"
+#endif
+#ifndef TCL_CFG_OPTIMIZED
+			    ".no-optimize"
+#endif
+#ifdef __OBJC__
+			    ".objective-c"
+#if defined(__cplusplus)
+			    "plusplus"
+#endif
+#endif
+#ifdef TCL_CFG_PROFILED
+			    ".profile"
+#endif
+#ifdef PURIFY
+			    ".purify"
+#endif
+#ifdef STATIC_BUILD
+			    ".static"
+#endif
+		), NULL);
+    }
+
     /* Provide the current package */
 
-    if (Tcl_PkgProvide(interp, "tdbc::postgres", PACKAGE_VERSION) != TCL_OK) {
+    if (Tcl_PkgProvideEx(interp, "tdbc::postgres", PACKAGE_VERSION, NULL) != TCL_OK) {
 	return TCL_ERROR;
     }
 
@@ -3307,14 +3402,14 @@ Tdbcpostgres_Init(
     }
     Tcl_InitHashTable(&(pidata->typeNumHash), TCL_ONE_WORD_KEYS);
     for (i = 0; dataTypes[i].name != NULL; ++i) {
-	int new;
+	int isNew;
 	Tcl_HashEntry* entry =
 	    Tcl_CreateHashEntry(&(pidata->typeNumHash),
 				INT2PTR(dataTypes[i].oid),
-				&new);
+				&isNew);
 	Tcl_Obj* nameObj = Tcl_NewStringObj(dataTypes[i].name, -1);
 	Tcl_IncrRefCount(nameObj);
-	Tcl_SetHashValue(entry, (ClientData) nameObj);
+	Tcl_SetHashValue(entry, (void *) nameObj);
     }
 
 
@@ -3333,7 +3428,7 @@ Tdbcpostgres_Init(
     Tcl_ClassSetConstructor(interp, curClass,
 	    Tcl_NewMethod(interp, curClass, NULL, 1,
 		&ConnectionConstructorType,
-		(ClientData) pidata));
+		(void *) pidata));
 
     /* Attach the methods to the 'connection' class */
 
@@ -3341,7 +3436,7 @@ Tdbcpostgres_Init(
 	nameObj = Tcl_NewStringObj(ConnectionMethods[i]->name, -1);
 	Tcl_IncrRefCount(nameObj);
 	Tcl_NewMethod(interp, curClass, nameObj, 1, ConnectionMethods[i],
-			   (ClientData) NULL);
+			   NULL);
 	Tcl_DecrRefCount(nameObj);
     }
 
@@ -3361,7 +3456,7 @@ Tdbcpostgres_Init(
     Tcl_ClassSetConstructor(interp, curClass,
 			    Tcl_NewMethod(interp, curClass, NULL, 1,
 					  &StatementConstructorType,
-					  (ClientData) NULL));
+					  NULL));
 
     /* Attach the methods to the 'statement' class */
 
@@ -3369,7 +3464,7 @@ Tdbcpostgres_Init(
 	nameObj = Tcl_NewStringObj(StatementMethods[i]->name, -1);
 	Tcl_IncrRefCount(nameObj);
 	Tcl_NewMethod(interp, curClass, nameObj, 1, StatementMethods[i],
-			   (ClientData) NULL);
+			   NULL);
 	Tcl_DecrRefCount(nameObj);
     }
 
@@ -3389,7 +3484,7 @@ Tdbcpostgres_Init(
     Tcl_ClassSetConstructor(interp, curClass,
 			    Tcl_NewMethod(interp, curClass, NULL, 1,
 					  &ResultSetConstructorType,
-					  (ClientData) NULL));
+					  NULL));
 
     /* Attach the methods to the 'resultSet' class */
 
@@ -3397,18 +3492,18 @@ Tdbcpostgres_Init(
 	nameObj = Tcl_NewStringObj(ResultSetMethods[i]->name, -1);
 	Tcl_IncrRefCount(nameObj);
 	Tcl_NewMethod(interp, curClass, nameObj, 1, ResultSetMethods[i],
-			   (ClientData) NULL);
+			   NULL);
 	Tcl_DecrRefCount(nameObj);
     }
     nameObj = Tcl_NewStringObj("nextlist", -1);
     Tcl_IncrRefCount(nameObj);
     Tcl_NewMethod(interp, curClass, nameObj, 1, &ResultSetNextrowMethodType,
-		  (ClientData) 1);
+		  INT2PTR(1));
     Tcl_DecrRefCount(nameObj);
     nameObj = Tcl_NewStringObj("nextdict", -1);
     Tcl_IncrRefCount(nameObj);
     Tcl_NewMethod(interp, curClass, nameObj, 1, &ResultSetNextrowMethodType,
-		  (ClientData) 0);
+		  INT2PTR(0));
     Tcl_DecrRefCount(nameObj);
 
     /*
@@ -3427,6 +3522,9 @@ Tdbcpostgres_Init(
 
     return TCL_OK;
 }
+#ifdef __cplusplus
+}
+#endif  /* __cplusplus */
 
 /*
  *-----------------------------------------------------------------------------
@@ -3462,7 +3560,7 @@ DeletePerInterpData(
    for (i = 0; i < LIT__END; ++i) {
        Tcl_DecrRefCount(pidata->literals[i]);
    }
-   ckfree((char *) pidata);
+   ckfree(pidata);
 
    Tcl_MutexLock(&pgMutex);
    if (--pgRefCount == 0) {

@@ -60,6 +60,11 @@ typedef short int16_t;
 #  define snprintf _snprintf
 #endif
 
+#if (TCL_MAJOR_VERSION == 8) && (TCL_MINOR_VERSION < 7)
+#   define TCL_SIZE_MODIFIER ""
+#   define Tcl_Size int
+#endif
+
 /* Static data contained within this file */
 
 static Tcl_Mutex pgMutex;	/* Mutex protecting per-process structures */
@@ -306,7 +311,7 @@ typedef struct StatementData {
     Tcl_Obj* columnNames;	/* Column names in the result set */
 
     struct ParamData *params;	/* Attributes of parameters */
-    int nParams;		/* Number of parameters */
+    Tcl_Size nParams;		/* Number of parameters */
     Oid* paramDataTypes;	/* Param data types list */
     int paramTypesChanged;	/* Indicator of changed param types */
     int flags;
@@ -1289,7 +1294,7 @@ ConnectionConstructor(
 				/* Per-interp data for the POSTGRES package */
     Tcl_Object thisObject = Tcl_ObjectContextObject(context);
 				/* The current object */
-    int skip = Tcl_ObjectContextSkippedArgs(context);
+    Tcl_Size skip = Tcl_ObjectContextSkippedArgs(context);
 				/* The number of leading arguments to skip */
     ConnectionData* cdata;	/* Per-connection data */
 
@@ -1640,7 +1645,7 @@ static int ConnectionConfigureMethod(
 ) {
     Tcl_Object thisObject = Tcl_ObjectContextObject(objectContext);
 				/* The current connection object */
-    int skip = Tcl_ObjectContextSkippedArgs(objectContext);
+    Tcl_Size skip = Tcl_ObjectContextSkippedArgs(objectContext);
 				/* Number of arguments to skip */
     ConnectionData* cdata = (ConnectionData*)
 	Tcl_ObjectGetMetadata(thisObject, &connectionDataType);
@@ -2036,7 +2041,6 @@ PrepareStatement(
     ConnectionData* cdata = sdata->cdata;
 				/* Connection data */
     const char* nativeSqlStr;	/* Native SQL statement to prepare */
-    int nativeSqlLen;		/* Length of the statement */
     PGresult* res;		/* result of statement preparing*/
     PGresult* res2;
     int i;
@@ -2050,7 +2054,7 @@ PrepareStatement(
      * to let PostgreSQL infer all of them.
      */
 
-    nativeSqlStr = Tcl_GetStringFromObj(sdata->nativeSql, &nativeSqlLen);
+    nativeSqlStr = Tcl_GetString(sdata->nativeSql);
     res = PQprepare(cdata->pgPtr, stmtName, nativeSqlStr, 0, NULL);
     if (res == NULL) {
         TransferPostgresError(interp, cdata->pgPtr);
@@ -2173,7 +2177,7 @@ StatementConstructor(
 ) {
     Tcl_Object thisObject = Tcl_ObjectContextObject(context);
 				/* The current statement object */
-    int skip = Tcl_ObjectContextSkippedArgs(context);
+    Tcl_Size skip = Tcl_ObjectContextSkippedArgs(context);
 				/* Number of args to skip before the
 				 * payload arguments */
     Tcl_Object connectionObject;
@@ -2181,14 +2185,14 @@ StatementConstructor(
     ConnectionData* cdata;	/* The connection object's data */
     StatementData* sdata;	/* The statement's object data */
     Tcl_Obj* tokens;		/* The tokens of the statement to be prepared */
-    int tokenc;			/* Length of the 'tokens' list */
+    Tcl_Size tokenc;		/* Length of the 'tokens' list */
     Tcl_Obj** tokenv;		/* Exploded tokens from the list */
     Tcl_Obj* nativeSql;		/* SQL statement mapped to native form */
     char* tokenStr;		/* Token string */
-    int tokenLen;		/* Length of a token */
+    Tcl_Size tokenLen;	/* Length of a token */
     PGresult* res;		/* Temporary result of libpq calls */
     char tmpstr[30];		/* Temporary array for strings */
-    int i, j;
+    Tcl_Size i, j;
     (void)dummy;
 
 
@@ -2253,7 +2257,7 @@ StatementConstructor(
 	    }
 
 	    j+=1;
-	    snprintf(tmpstr, 30, "$%d", j);
+	    snprintf(tmpstr, 30, "$%" TCL_SIZE_MODIFIER "d", j);
 	    Tcl_AppendToObj(nativeSql, tmpstr, -1);
 	    Tcl_ListObjAppendElement(NULL, sdata->subVars,
 				     Tcl_NewStringObj(tokenStr+1, tokenLen-1));
@@ -2655,7 +2659,7 @@ ResultSetConstructor(
 ) {
     Tcl_Object thisObject = Tcl_ObjectContextObject(context);
 				/* The current result set object */
-    int skip = Tcl_ObjectContextSkippedArgs(context);
+    Tcl_Size skip = Tcl_ObjectContextSkippedArgs(context);
 				/* Number of args to skip */
     Tcl_Object statementObject;	/* The current statement object */
     ConnectionData* cdata;	/* The Postgres connection object's data */
@@ -2678,6 +2682,7 @@ ResultSetConstructor(
     PGresult* res;		/* Temporary result */
     int i;
     int status = TCL_ERROR;	/* Return status */
+    Tcl_Size len;
     (void)dummy;
 
     /* Check parameter count */
@@ -2761,7 +2766,7 @@ ResultSetConstructor(
     }
 
     paramValues = (const char**) ckalloc(sdata->nParams * sizeof(char* ));
-    paramLengths = (int*) ckalloc(sdata->nParams * sizeof(int*));
+    paramLengths = (int *) ckalloc(sdata->nParams * sizeof(int *));
     paramFormats = (int*) ckalloc(sdata->nParams * sizeof(int*));
     paramNeedsFreeing = (char *)ckalloc(sdata->nParams);
     paramTempObjs = (Tcl_Obj**) ckalloc(sdata->nParams * sizeof(Tcl_Obj*));
@@ -2846,7 +2851,8 @@ ResultSetConstructor(
 			paramFormats[i] = 0;
 			paramValues[i] =
 			    Tcl_GetStringFromObj(paramTempObjs[i],
-						 &paramLengths[i]);
+						 &len);
+			paramLengths[i] = len;
 		    } else {
 			goto convertString;
 				/* If Tcl can't parse it, let SQL try */
@@ -2865,7 +2871,8 @@ ResultSetConstructor(
 			paramFormats[i] = 0;
 			paramValues[i] =
 			    Tcl_GetStringFromObj(paramTempObjs[i],
-						 &paramLengths[i]);
+						 &len);
+			paramLengths[i] = len;
 		    } else {
 			goto convertString;
 				/* If Tcl can't parse it, let SQL try */
@@ -2877,14 +2884,16 @@ ResultSetConstructor(
 		paramFormats[i] = 1;
 		paramValues[i] =
 		    (char*)Tcl_GetByteArrayFromObj(paramValObj,
-						   &paramLengths[i]);
+						   &len);
+		paramLengths[i] = len;
 		break;
 
 	    default:
 	    convertString:
 		paramFormats[i] = 0;
 		paramValues[i] = Tcl_GetStringFromObj(paramValObj,
-						      &paramLengths[i]);
+						      &len);
+		paramLengths[i] = len;
 		break;
 	    }
 	} else {
@@ -3018,7 +3027,7 @@ ResultSetNextrowMethod(
 				/* Per interpreter data */
     Tcl_Obj** literals = pidata->literals;
 
-    int nColumns = 0;		/* Number of columns in the result set */
+    Tcl_Size nColumns = 0;	/* Number of columns in the result set */
     Tcl_Obj* colObj;		/* Column obtained from the row */
     Tcl_Obj* colName;		/* Name of the current column */
     Tcl_Obj* resultRow;		/* Row of the result set under construction */
@@ -3027,7 +3036,7 @@ ResultSetNextrowMethod(
 
     char * buffer;		/* buffer containing field value */
     int buffSize;		/* size of buffer containing field value */
-    int i;
+    Tcl_Size i;
 
     if (objc != 3) {
 	Tcl_WrongNumArgs(interp, 2, objv, "varName");

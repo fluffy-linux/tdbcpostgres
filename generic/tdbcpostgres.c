@@ -418,7 +418,7 @@ static Tcl_Obj* QueryConnectionOption(ConnectionData* cdata,
 				      Tcl_Interp* interp,
 				      int optionNum);
 static int ConfigureConnection(ConnectionData* cdata, Tcl_Interp* interp,
-			       int objc, Tcl_Obj *const objv[], int skip);
+			       Tcl_Size objc, Tcl_Obj *const objv[], Tcl_Size skip);
 static int ConnectionConstructor(void *clientData, Tcl_Interp* interp,
 				 Tcl_ObjectContext context,
 				 int objc, Tcl_Obj *const objv[]);
@@ -1038,9 +1038,9 @@ static int
 ConfigureConnection(
     ConnectionData* cdata,	/* Connection data */
     Tcl_Interp* interp,		/* Tcl interpreter */
-    int objc,			/* Parameter count */
+    Tcl_Size objc,			/* Parameter count */
     Tcl_Obj* const objv[],	/* Parameter data */
-    int skip			/* Number of parameters to skip */
+    Tcl_Size skip			/* Number of parameters to skip */
 ) {
     int optionIndex;		/* Index of the current option in
 				 * ConnOptions */

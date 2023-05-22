@@ -1493,7 +1493,7 @@ ConnectionColumnsMethod(
     Tcl_Obj* retval;		/* List of table names */
     Tcl_Obj* attrs;		/* Attributes of the column */
     Tcl_Obj* name;		/* Name of a column */
-    Tcl_Obj* sqlQuery = Tcl_NewStringObj("SELECT * FROM ", -1);
+    Tcl_Obj* sqlQuery = Tcl_NewStringObj("SELECT * FROM \"", -1);
 				/* Query used */
 
     Tcl_IncrRefCount(sqlQuery);
@@ -1508,6 +1508,7 @@ ConnectionColumnsMethod(
     /* Check if table exists by retreiving one row.
      * The result wille be later used to determine column types (oids) */
     Tcl_AppendObjToObj(sqlQuery, objv[2]);
+    Tcl_AppendToObj(sqlQuery, "\" LIMIT 1", -1);
 
     if (ExecSimpleQuery(interp, cdata->pgPtr, Tcl_GetString(sqlQuery),
 			&resType) != TCL_OK) {

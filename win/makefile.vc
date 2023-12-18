@@ -72,7 +72,11 @@ TDBCSTUBLIBNAME	 = tdbcstub$(TDBC_VERSION).lib
 TDBCSTUBLIBNAME	 = tdbcstub.lib
 !endif
 TDBCSTUBLIB 	 = $(TDBC_DIR)\win\$(BUILDDIRTOP)\$(TDBCSTUBLIBNAME)
+!if $(TCL_MAJOR_VERSION) == 8 || "$(TCL_BUILD_FOR)" == "8"
 TDBC_LIB_FILE	 = tdbc$(TDBC_VERSION).dll
+!else
+TDBC_LIB_FILE	 = tcl9tdbc$(TDBC_VERSION).dll
+!endif
 TDBC_BIN_DIR     = $(TDBC_DIR)/win/$(BUILDDIRTOP)
 
 PRJ_INCLUDES	= -I"$(TDBC_GENERIC_DIR)"
@@ -120,9 +124,9 @@ test: setup $(PROJECT)
         @set PATH=$(_TCLDIR)\win\$(BUILDDIRTOP);$(PATH)
 	$(DEBUGGER) $(TCLSH) "$(ROOT:\=/)/tests/all.tcl" $(TESTFLAGS) \
 		-load "package ifneeded tdbc::postgres $(DOTVERSION) \
-			{source {$(LIBDIR:\=/)/tdbcpostgres.tcl};load {$(PRJLIB:\=/)} $(PROJECT)};\
+			{source {$(LIBDIR:\=/)/tdbcpostgres.tcl};load {$(PRJLIB:\=/)} [string totitle $(PROJECT)]};\
 		package ifneeded tdbc $(TDBC_DOTVERSION) \
-			{source {$(TDBC_BIN_DIR:\=/)/tdbc.tcl};load {$(TDBC_BIN_DIR:\=/)/$(TDBC_LIB_FILE)} tdbc}"
+			{source {$(TDBC_BIN_DIR:\=/)/tdbc.tcl};load {$(TDBC_BIN_DIR:\=/)/$(TDBC_LIB_FILE)} Tdbc}"
 !endif
 
 

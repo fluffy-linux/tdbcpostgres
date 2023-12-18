@@ -7,8 +7,8 @@
 #   nmake /f makefile.vc INSTALLDIR=c:\path\to\installdir TCLDIR=c:\path\to\tcl\source test
 #   nmake /f makefile.vc INSTALLDIR=c:\path\to\installdir TCLDIR=c:\path\to\tcl\source install
 #
-# For other build options (debug, static etc.)
-# See TIP 477 (https://core.tcl-lang.org/tips/doc/trunk/tip/477.md) for
+# For other build options (debug, static etc.),
+# See TIP 477 (https://core.tcl-lang.org/tips/doc/main/tip/477.md) for
 # detailed documentation.
 #
 # See the file "license.terms" for information on usage and redistribution
@@ -18,7 +18,7 @@
 
 PROJECT = tdbcpostgres
 # Tcl 8.6 etc. compile with /DUNICODE. TDBC pre-nmake reform compiled
-# without -DUNICODE. Keep that behaviour.
+# without -DUNICODE. Keep that behaviour for now.
 USE_WIDECHAR_API  = 0
 
 PRJ_DEFINES = $(PRJ_DEFINES)
@@ -68,15 +68,12 @@ TDBC_VERSION     = $(TDBC_DOTVERSION:.=)
 TDBC_GENERIC_DIR = $(TDBC_DIR)\generic
 !if $(TCL_MAJOR_VERSION) == 8 || "$(TCL_BUILD_FOR)" == "8"
 TDBCSTUBLIBNAME	 = tdbcstub$(TDBC_VERSION).lib
-!else
-TDBCSTUBLIBNAME	 = tdbcstub.lib
-!endif
-TDBCSTUBLIB 	 = $(TDBC_DIR)\win\$(BUILDDIRTOP)\$(TDBCSTUBLIBNAME)
-!if $(TCL_MAJOR_VERSION) == 8 || "$(TCL_BUILD_FOR)" == "8"
 TDBC_LIB_FILE	 = tdbc$(TDBC_VERSION).dll
 !else
+TDBCSTUBLIBNAME	 = tdbcstub.lib
 TDBC_LIB_FILE	 = tcl9tdbc$(TDBC_VERSION).dll
 !endif
+TDBCSTUBLIB 	 = $(TDBC_DIR)\win\$(BUILDDIRTOP)\$(TDBCSTUBLIBNAME)
 TDBC_BIN_DIR     = $(TDBC_DIR)/win/$(BUILDDIRTOP)
 
 PRJ_INCLUDES	= -I"$(TDBC_GENERIC_DIR)"

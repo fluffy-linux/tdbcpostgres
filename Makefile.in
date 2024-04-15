@@ -252,9 +252,9 @@ install-doc: doc
 	done
 
 test: binaries libraries
-	$(TCLSH) `@CYGPATH@ $(srcdir)/tests/all.tcl` $(TESTFLAGS) \
+	$(TCLSH) -encoding utf-8 `@CYGPATH@ $(srcdir)/tests/all.tcl` $(TESTFLAGS) \
 		-load "package ifneeded tdbc::postgres $(PACKAGE_VERSION) \
-			[list source `@CYGPATH@ $(srcdir)/library/tdbcpostgres.tcl`]\;[list load `@CYGPATH@ $(PKG_LIB_FILE)` [string totitle $(PACKAGE_NAME)]]"
+			[list source -encoding utf-8 `@CYGPATH@ $(srcdir)/library/tdbcpostgres.tcl`]\;[list load `@CYGPATH@ $(PKG_LIB_FILE)` [string totitle $(PACKAGE_NAME)]]"
 
 shell: binaries libraries
 	@$(TCLSH) $(SCRIPT)
@@ -264,7 +264,7 @@ gdb:
 
 gdb-test: binaries libraries
 	$(TCLSH_ENV) $(PKG_ENV) $(GDB) \
-	    --args $(TCLSH_PROG) `@CYGPATH@ $(srcdir)/tests/all.tcl` \
+	    --args $(TCLSH_PROG) -encoding utf-8 `@CYGPATH@ $(srcdir)/tests/all.tcl` \
 	    $(TESTFLAGS) -singleproc 1 \
 	    -load "package ifneeded $(PACKAGE_NAME) $(PACKAGE_VERSION) \
 		[list load `@CYGPATH@ $(PKG_LIB_FILE)` [string totitle $(PACKAGE_NAME)]]"
@@ -404,11 +404,11 @@ dist: dist-clean $(srcdir)/manifest.uuid
 #========================================================================
 
 genstubs: $(TDBC_SRC_DIR)/tools/genExtStubs.tcl $(srcdir)/generic/pqStubDefs.txt
-	@echo $(TCLSH_PROGRAM) $(TDBC_SRC_DIR)/tools/genExtStubs.tcl \
+	@echo $(TCLSH_PROGRAM) -encoding utf-8 $(TDBC_SRC_DIR)/tools/genExtStubs.tcl \
 		$(srcdir)/generic/pqStubDefs.txt \
 		$(srcdir)/generic/pqStubs.h \
 		$(srcdir)/generic/pqStubInit.c
-	@$(TCLSH) $(TDBC_SRC_DIR)/tools/genExtStubs.tcl \
+	@$(TCLSH) -encoding utf-8 $(TDBC_SRC_DIR)/tools/genExtStubs.tcl \
 		$(srcdir)/generic/pqStubDefs.txt \
 		$(srcdir)/generic/pqStubs.h \
 		$(srcdir)/generic/pqStubInit.c

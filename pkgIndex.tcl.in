@@ -5,10 +5,10 @@ if {![package vsatisfies [package provide Tcl] 8.6-]} {
 }
 if {[package vsatisfies [package provide Tcl] 9.0-]} {
     package ifneeded tdbc::postgres @PACKAGE_VERSION@ \
-	    "[list source [file join $dir @PACKAGE_NAME@.tcl]]\;\
+	    "[list source -encoding utf-8 [file join $dir @PACKAGE_NAME@.tcl]]\;\
 	    [list load [file join $dir @PKG_LIB_FILE9@] [string totitle @PACKAGE_NAME@]]"
 } else {
     package ifneeded tdbc::postgres @PACKAGE_VERSION@ \
-	    "[list source [file join $dir @PACKAGE_NAME@.tcl]]\;\
+	    "[list source -encoding utf-8 [file join $dir @PACKAGE_NAME@.tcl]]\;\
 	    [list load [file join $dir @PKG_LIB_FILE8@] [string totitle @PACKAGE_NAME@]]"
 }

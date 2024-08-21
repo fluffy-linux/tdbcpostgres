@@ -1513,7 +1513,7 @@ ConnectionColumnsMethod(
 
     if (ExecSimpleQuery(interp, cdata->pgPtr, Tcl_GetString(sqlQuery),
 			&resType) != TCL_OK) {
-        Tcl_DecrRefCount(sqlQuery);
+	Tcl_DecrRefCount(sqlQuery);
 	return TCL_ERROR;
     }
 
@@ -1540,7 +1540,7 @@ ConnectionColumnsMethod(
 
     if (ExecSimpleQuery(interp, cdata->pgPtr,
 			Tcl_GetString(sqlQuery), &res) != TCL_OK) {
-        Tcl_DecrRefCount(sqlQuery);
+	Tcl_DecrRefCount(sqlQuery);
 	PQclear(resType);
 	return TCL_ERROR;
     } else {
@@ -2062,7 +2062,7 @@ PrepareStatement(
     nativeSqlStr = Tcl_GetString(sdata->nativeSql);
     res = PQprepare(cdata->pgPtr, stmtName, nativeSqlStr, 0, NULL);
     if (res == NULL) {
-        TransferPostgresError(interp, cdata->pgPtr);
+	TransferPostgresError(interp, cdata->pgPtr);
 	return NULL;
     }
 
@@ -2127,7 +2127,7 @@ ResultDescToTcl(
 	    entry =
 		Tcl_CreateHashEntry(&names, fieldName, &isNew);
 	    while (!isNew) {
-	        count = PTR2INT(Tcl_GetHashValue(entry));
+		count = PTR2INT(Tcl_GetHashValue(entry));
 		++count;
 		Tcl_SetHashValue(entry, INT2PTR(count));
 		snprintf(numbuf, sizeof(numbuf), "#%d", count);

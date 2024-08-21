@@ -22,7 +22,7 @@
 
 	* configure.in: Made configurator changes so that tdbc::postgres
 	* Makefile.in:  will `make test` correctly even when running against
-	                an uninstalled TDBC.
+			an uninstalled TDBC.
 	* configure:    autoconf 2.68
 		*** ADVANCED TO NEW VERSION OF AUTOCONF ***
 
@@ -42,15 +42,15 @@
 2012-07-13   Kevin B. Kenny  <kennykb@acm.org>
 
 	* generic/tdbcpostgres.c: Corrected a problem where PostgreSQL 9.0
-	                          and beyond return byte arrays in an
+				  and beyond return byte arrays in an
 				  incompatible format, yielding silent
 				  data corruption in SELECT operations.
-	                          (Bug [4357c31d89])
+				  (Bug [4357c31d89])
 
 2012-07-10  Kevin B. Kenny  <kennykb@acm.org>
 
 	* generic/tdbcpostgres.c: Fixed a non-static table argument to
-			          Tcl_GetIndexFromObjStruct.
+				  Tcl_GetIndexFromObjStruct.
 
 2012-06-10  Jan Nijtmans  <jan.nijtmans@gmail.com>
 
@@ -128,11 +128,11 @@
 				    returns 0 since PostgreSQL calls return
 				    single result sets.
 	* tests/tdbcpostgres.test: Added test cases (30.0 and 30.1) for the
-	                           above.
+				   above.
 	* configure.in: Added a missing stanza of code for finding the tdbc
-	                library and include in the build dir when building
-	                against an uninstalled tdbc. Thanks to Konstantin
-	                Khomoutov for reporting this error.
+			library and include in the build dir when building
+			against an uninstalled tdbc. Thanks to Konstantin
+			Khomoutov for reporting this error.
 	* configure: autoconf2.59
 
 2010-09-03  Kevin B. Kenny  <kennykb@acm.org>
@@ -235,7 +235,7 @@
 2009-09-23  Kevin B. Kenny  <kennykb@acm.org>
 
 	* generic/tdbcpostgres.c: Removed an ugly workaround for a
-	                          bug in Tcl_SubstObj.
+				  bug in Tcl_SubstObj.
 	* configure.in:
 	* README:		Advanced version to 1.0b13
 	* configure:		autoconf 2.59
@@ -248,7 +248,7 @@
 	* generic/tdbcpostgres.c:   Many changes to upgrade to Tcl Engineering
 	* library/tdbcpostgres.tcl: Manual conventions and correct memory
 	* tests/current.test:       mismanagement. Introduced a workaround
-			            for a suspected bug in Tcl_SubstObj.
+				    for a suspected bug in Tcl_SubstObj.
 
 2009-09-01  Kevin B. Kenny  <kennykb@acm.org>
 

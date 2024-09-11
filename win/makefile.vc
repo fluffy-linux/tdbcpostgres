@@ -68,7 +68,7 @@ TDBC_VERSION     = $(TDBC_DOTVERSION:.=)
 TDBC_GENERIC_DIR = $(TDBC_DIR)\generic
 !if $(TCL_MAJOR_VERSION) == 8 || "$(TCL_BUILD_FOR)" == "8"
 TDBCSTUBLIBNAME	 = tdbcstub$(TDBC_VERSION).lib
-TDBC_LIB_FILE	 = tdbc$(TDBC_VERSION).dll
+TDBC_LIB_FILE	 = tdbc$(TDBC_VERSION)$(SUFX).dll
 !else
 TDBCSTUBLIBNAME	 = tdbcstub.lib
 TDBC_LIB_FILE	 = tcl9tdbc$(TDBC_VERSION).dll

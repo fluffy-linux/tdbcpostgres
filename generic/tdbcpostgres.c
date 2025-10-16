@@ -66,6 +66,16 @@ typedef short int16_t;
 #  define JOIN1(a,b) a##b
 #endif
 
+#if TCL_MAJOR_VERSION < 9
+  typedef Tcl_ObjCmdProc Tcl_ObjCmdProc2;
+  typedef Tcl_MethodType Tcl_MethodType2;
+# define Tcl_NewMethod2 Tcl_NewMethod
+# define Tcl_CreateObjCommand2 Tcl_CreateObjCommand
+# define TCL_OO_METHOD_VERSION_2 TCL_OO_METHOD_VERSION_CURRENT
+# undef Tcl_Size
+  typedef int Tcl_Size;
+#endif
+
 #ifndef TCL_UNUSED
 #   if defined(__cplusplus)
 #	define TCL_UNUSED(T) T
@@ -434,29 +444,29 @@ static Tcl_Obj* QueryConnectionOption(ConnectionData* cdata,
 				      Tcl_Interp* interp,
 				      int optionNum);
 static int ConfigureConnection(ConnectionData* cdata, Tcl_Interp* interp,
-			       Tcl_Size objc, Tcl_Obj *const objv[], Tcl_Size skip);
+			       Tcl_Size objc, Tcl_Obj *const *, Tcl_Size skip);
 static int ConnectionConstructor(void *clientData, Tcl_Interp* interp,
 				 Tcl_ObjectContext context,
-				 int objc, Tcl_Obj *const objv[]);
+				 Tcl_Size objc, Tcl_Obj *const *);
 static int ConnectionBegintransactionMethod(void *clientData,
 					    Tcl_Interp* interp,
 					    Tcl_ObjectContext context,
-					    int objc, Tcl_Obj *const objv[]);
+					    Tcl_Size objc, Tcl_Obj *const *);
 static int ConnectionColumnsMethod(void *clientData, Tcl_Interp* interp,
 				  Tcl_ObjectContext context,
-				  int objc, Tcl_Obj *const objv[]);
+				  Tcl_Size objc, Tcl_Obj *const *);
 static int ConnectionCommitMethod(void *clientData, Tcl_Interp* interp,
 				  Tcl_ObjectContext context,
-				  int objc, Tcl_Obj *const objv[]);
+				  Tcl_Size objc, Tcl_Obj *const *);
 static int ConnectionConfigureMethod(void *clientData, Tcl_Interp* interp,
 				     Tcl_ObjectContext context,
-				     int objc, Tcl_Obj *const objv[]);
+				     Tcl_Size objc, Tcl_Obj *const *);
 static int ConnectionRollbackMethod(void *clientData, Tcl_Interp* interp,
 				    Tcl_ObjectContext context,
-				    int objc, Tcl_Obj *const objv[]);
+				    Tcl_Size objc, Tcl_Obj *const *);
 static int ConnectionTablesMethod(void *clientData, Tcl_Interp* interp,
 				  Tcl_ObjectContext context,
-				  int objc, Tcl_Obj *const objv[]);
+				  Tcl_Size objc, Tcl_Obj *const *);
 static void DeleteConnectionMetadata(void *clientData);
 static void DeleteConnection(ConnectionData* cdata);
 static int CloneConnection(Tcl_Interp* interp, void *oldClientData,
@@ -470,13 +480,13 @@ static PGresult* PrepareStatement(Tcl_Interp* interp,
 static Tcl_Obj* ResultDescToTcl(PGresult* resultDesc);
 static int StatementConstructor(void *clientData, Tcl_Interp* interp,
 				Tcl_ObjectContext context,
-				int objc, Tcl_Obj *const objv[]);
+				Tcl_Size objc, Tcl_Obj *const *);
 static int StatementParamtypeMethod(void *clientData, Tcl_Interp* interp,
 				    Tcl_ObjectContext context,
-				    int objc, Tcl_Obj *const objv[]);
+				    Tcl_Size objc, Tcl_Obj *const *);
 static int StatementParamsMethod(void *clientData, Tcl_Interp* interp,
 				 Tcl_ObjectContext context,
-				 int objc, Tcl_Obj *const objv[]);
+				 Tcl_Size objc, Tcl_Obj *const *);
 static void DeleteStatementMetadata(void *clientData);
 static void DeleteStatement(StatementData* sdata);
 static int CloneStatement(Tcl_Interp* interp, void *oldClientData,
@@ -484,16 +494,16 @@ static int CloneStatement(Tcl_Interp* interp, void *oldClientData,
 
 static int ResultSetConstructor(void *clientData, Tcl_Interp* interp,
 				Tcl_ObjectContext context,
-				int objc, Tcl_Obj *const objv[]);
+				Tcl_Size objc, Tcl_Obj *const *);
 static int ResultSetColumnsMethod(void *clientData, Tcl_Interp* interp,
 				  Tcl_ObjectContext context,
-				  int objc, Tcl_Obj *const objv[]);
+				  Tcl_Size objc, Tcl_Obj *const *);
 static int ResultSetNextrowMethod(void *clientData, Tcl_Interp* interp,
 				  Tcl_ObjectContext context,
-				  int objc, Tcl_Obj *const objv[]);
+				  Tcl_Size objc, Tcl_Obj *const *);
 static int ResultSetRowcountMethod(void *clientData, Tcl_Interp* interp,
 				   Tcl_ObjectContext context,
-				   int objc, Tcl_Obj *const objv[]);
+				   Tcl_Size objc, Tcl_Obj *const *);
 static void DeleteResultSetMetadata(void *clientData);
 static void DeleteResultSet(ResultSetData* rdata);
 static int CloneResultSet(Tcl_Interp* interp, void *oldClientData,
@@ -540,8 +550,8 @@ const static Tcl_ObjectMetadataType resultSetDataType = {
 
 /* Method types of the result set methods that are implemented in C */
 
-const static Tcl_MethodType ResultSetConstructorType = {
-    TCL_OO_METHOD_VERSION_CURRENT,
+const static Tcl_MethodType2 ResultSetConstructorType = {
+    TCL_OO_METHOD_VERSION_2,
 				/* version */
     "CONSTRUCTOR",		/* name */
     ResultSetConstructor,	/* callProc */
@@ -549,16 +559,16 @@ const static Tcl_MethodType ResultSetConstructorType = {
     NULL			/* cloneProc */
 };
 
-const static Tcl_MethodType ResultSetColumnsMethodType = {
-    TCL_OO_METHOD_VERSION_CURRENT,
+const static Tcl_MethodType2 ResultSetColumnsMethodType = {
+    TCL_OO_METHOD_VERSION_2,
 				/* version */    "columns",			/* name */
     ResultSetColumnsMethod,	/* callProc */
     NULL,			/* deleteProc */
     NULL			/* cloneProc */
 };
 
-const static Tcl_MethodType ResultSetNextrowMethodType = {
-    TCL_OO_METHOD_VERSION_CURRENT,
+const static Tcl_MethodType2 ResultSetNextrowMethodType = {
+    TCL_OO_METHOD_VERSION_2,
 				/* version */
     "nextrow",			/* name */
     ResultSetNextrowMethod,	/* callProc */
@@ -566,8 +576,8 @@ const static Tcl_MethodType ResultSetNextrowMethodType = {
     NULL			/* cloneProc */
 };
 
-const static Tcl_MethodType ResultSetRowcountMethodType = {
-    TCL_OO_METHOD_VERSION_CURRENT,
+const static Tcl_MethodType2 ResultSetRowcountMethodType = {
+    TCL_OO_METHOD_VERSION_2,
 				/* version */
     "rowcount",			/* name */
     ResultSetRowcountMethod,	/* callProc */
@@ -577,7 +587,7 @@ const static Tcl_MethodType ResultSetRowcountMethodType = {
 
 /* Methods to create on the result set class */
 
-const static Tcl_MethodType* ResultSetMethods[] = {
+const static Tcl_MethodType2* ResultSetMethods[] = {
     &ResultSetColumnsMethodType,
     &ResultSetRowcountMethodType,
     NULL
@@ -585,8 +595,8 @@ const static Tcl_MethodType* ResultSetMethods[] = {
 
 /* Method types of the connection methods that are implemented in C */
 
-const static Tcl_MethodType ConnectionConstructorType = {
-    TCL_OO_METHOD_VERSION_CURRENT,
+const static Tcl_MethodType2 ConnectionConstructorType = {
+    TCL_OO_METHOD_VERSION_2,
 				/* version */
     "CONSTRUCTOR",		/* name */
     ConnectionConstructor,	/* callProc */
@@ -594,8 +604,8 @@ const static Tcl_MethodType ConnectionConstructorType = {
     CloneCmd			/* cloneProc */
 };
 
-const static Tcl_MethodType ConnectionBegintransactionMethodType = {
-    TCL_OO_METHOD_VERSION_CURRENT,
+const static Tcl_MethodType2 ConnectionBegintransactionMethodType = {
+    TCL_OO_METHOD_VERSION_2,
 				/* version */
     "begintransaction",		/* name */
     ConnectionBegintransactionMethod,	/* callProc */
@@ -603,8 +613,8 @@ const static Tcl_MethodType ConnectionBegintransactionMethodType = {
     NULL			/* cloneProc */
 };
 
-const static Tcl_MethodType ConnectionColumnsMethodType = {
-    TCL_OO_METHOD_VERSION_CURRENT,
+const static Tcl_MethodType2 ConnectionColumnsMethodType = {
+    TCL_OO_METHOD_VERSION_2,
 				/* version */
     "columns",			/* name */
     ConnectionColumnsMethod,	/* callProc */
@@ -612,8 +622,8 @@ const static Tcl_MethodType ConnectionColumnsMethodType = {
     NULL			/* cloneProc */
 };
 
-const static Tcl_MethodType ConnectionCommitMethodType = {
-    TCL_OO_METHOD_VERSION_CURRENT,
+const static Tcl_MethodType2 ConnectionCommitMethodType = {
+    TCL_OO_METHOD_VERSION_2,
 				/* version */
     "commit",			/* name */
     ConnectionCommitMethod,	/* callProc */
@@ -621,8 +631,8 @@ const static Tcl_MethodType ConnectionCommitMethodType = {
     NULL			/* cloneProc */
 };
 
-const static Tcl_MethodType ConnectionConfigureMethodType = {
-    TCL_OO_METHOD_VERSION_CURRENT,
+const static Tcl_MethodType2 ConnectionConfigureMethodType = {
+    TCL_OO_METHOD_VERSION_2,
 				/* version */
     "configure",		/* name */
     ConnectionConfigureMethod,	/* callProc */
@@ -630,8 +640,8 @@ const static Tcl_MethodType ConnectionConfigureMethodType = {
     NULL			/* cloneProc */
 };
 
-const static Tcl_MethodType ConnectionRollbackMethodType = {
-    TCL_OO_METHOD_VERSION_CURRENT,
+const static Tcl_MethodType2 ConnectionRollbackMethodType = {
+    TCL_OO_METHOD_VERSION_2,
 				/* version */
     "rollback",			/* name */
     ConnectionRollbackMethod,	/* callProc */
@@ -639,8 +649,8 @@ const static Tcl_MethodType ConnectionRollbackMethodType = {
     NULL			/* cloneProc */
 };
 
-const static Tcl_MethodType ConnectionTablesMethodType = {
-    TCL_OO_METHOD_VERSION_CURRENT,
+const static Tcl_MethodType2 ConnectionTablesMethodType = {
+    TCL_OO_METHOD_VERSION_2,
 				/* version */
     "tables",			/* name */
     ConnectionTablesMethod,	/* callProc */
@@ -648,7 +658,7 @@ const static Tcl_MethodType ConnectionTablesMethodType = {
     NULL			/* cloneProc */
 };
 
-const static Tcl_MethodType* ConnectionMethods[] = {
+const static Tcl_MethodType2* ConnectionMethods[] = {
     &ConnectionBegintransactionMethodType,
     &ConnectionColumnsMethodType,
     &ConnectionCommitMethodType,
@@ -660,8 +670,8 @@ const static Tcl_MethodType* ConnectionMethods[] = {
 
 /* Method types of the statement methods that are implemented in C */
 
-const static Tcl_MethodType StatementConstructorType = {
-    TCL_OO_METHOD_VERSION_CURRENT,
+const static Tcl_MethodType2 StatementConstructorType = {
+    TCL_OO_METHOD_VERSION_2,
 				/* version */
     "CONSTRUCTOR",		/* name */
     StatementConstructor,	/* callProc */
@@ -669,8 +679,8 @@ const static Tcl_MethodType StatementConstructorType = {
     NULL			/* cloneProc */
 };
 
-const static Tcl_MethodType StatementParamsMethodType = {
-    TCL_OO_METHOD_VERSION_CURRENT,
+const static Tcl_MethodType2 StatementParamsMethodType = {
+    TCL_OO_METHOD_VERSION_2,
 				/* version */
     "params",			/* name */
     StatementParamsMethod,	/* callProc */
@@ -678,8 +688,8 @@ const static Tcl_MethodType StatementParamsMethodType = {
     NULL			/* cloneProc */
 };
 
-const static Tcl_MethodType StatementParamtypeMethodType = {
-    TCL_OO_METHOD_VERSION_CURRENT,
+const static Tcl_MethodType2 StatementParamtypeMethodType = {
+    TCL_OO_METHOD_VERSION_2,
 				/* version */
     "paramtype",		/* name */
     StatementParamtypeMethod,	/* callProc */
@@ -691,7 +701,7 @@ const static Tcl_MethodType StatementParamtypeMethodType = {
  * Methods to create on the statement class.
  */
 
-const static Tcl_MethodType* StatementMethods[] = {
+const static Tcl_MethodType2* StatementMethods[] = {
     &StatementParamsMethodType,
     &StatementParamtypeMethodType,
     NULL
@@ -1054,7 +1064,7 @@ ConfigureConnection(
     ConnectionData* cdata,	/* Connection data */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_Size objc,			/* Parameter count */
-    Tcl_Obj* const objv[],	/* Parameter data */
+    Tcl_Obj* const *objv,	/* Parameter data */
     Tcl_Size skip			/* Number of parameters to skip */
 ) {
     int optionIndex;		/* Index of the current option in
@@ -1302,8 +1312,8 @@ ConnectionConstructor(
     void *clientData,	/* Environment handle */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context, /* Object context */
-    int objc,			/* Parameter count */
-    Tcl_Obj *const objv[]	/* Parameter vector */
+    Tcl_Size objc,			/* Parameter count */
+    Tcl_Obj *const *objv	/* Parameter vector */
 ) {
     PerInterpData* pidata = (PerInterpData*) clientData;
 				/* Per-interp data for the POSTGRES package */
@@ -1362,8 +1372,8 @@ ConnectionBegintransactionMethod(
     TCL_UNUSED(void *),
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext objectContext, /* Object context */
-    int objc,			/* Parameter count */
-    Tcl_Obj *const objv[]	/* Parameter vector */
+    Tcl_Size objc,			/* Parameter count */
+    Tcl_Obj *const *objv	/* Parameter vector */
 ) {
     Tcl_Object thisObject = Tcl_ObjectContextObject(objectContext);
 				/* The current connection object */
@@ -1419,8 +1429,8 @@ ConnectionCommitMethod(
     TCL_UNUSED(void *),
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext objectContext, /* Object context */
-    int objc,			/* Parameter count */
-    Tcl_Obj *const objv[]	/* Parameter vector */
+    Tcl_Size objc,			/* Parameter count */
+    Tcl_Obj *const *objv	/* Parameter vector */
 ) {
     Tcl_Object thisObject = Tcl_ObjectContextObject(objectContext);
 				/* The current connection object */
@@ -1476,8 +1486,8 @@ ConnectionColumnsMethod(
     TCL_UNUSED(void *),
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext objectContext, /* Object context */
-    int objc,			/* Parameter count */
-    Tcl_Obj *const objv[]	/* Parameter vector */
+    Tcl_Size objc,			/* Parameter count */
+    Tcl_Obj *const *objv	/* Parameter vector */
 ) {
     Tcl_Object thisObject = Tcl_ObjectContextObject(objectContext);
 				/* The current connection object */
@@ -1653,8 +1663,8 @@ static int ConnectionConfigureMethod(
      TCL_UNUSED(void *),
      Tcl_Interp* interp,
      Tcl_ObjectContext objectContext,
-     int objc,
-     Tcl_Obj *const objv[]
+     Tcl_Size objc,
+     Tcl_Obj *const *objv
 ) {
     Tcl_Object thisObject = Tcl_ObjectContextObject(objectContext);
 				/* The current connection object */
@@ -1693,8 +1703,8 @@ ConnectionRollbackMethod(
     TCL_UNUSED(void *),
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext objectContext, /* Object context */
-    int objc,			/* Parameter count */
-    Tcl_Obj *const objv[]	/* Parameter vector */
+    Tcl_Size objc,			/* Parameter count */
+    Tcl_Obj *const *objv	/* Parameter vector */
 ) {
    Tcl_Object thisObject = Tcl_ObjectContextObject(objectContext);
 				/* The current connection object */
@@ -1750,8 +1760,8 @@ ConnectionTablesMethod(
     TCL_UNUSED(void *),
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext objectContext, /* Object context */
-    int objc,			/* Parameter count */
-    Tcl_Obj *const objv[]	/* Parameter vector */
+    Tcl_Size objc,			/* Parameter count */
+    Tcl_Obj *const *objv	/* Parameter vector */
 ) {
     Tcl_Object thisObject = Tcl_ObjectContextObject(objectContext);
 				/* The current connection object */
@@ -2175,8 +2185,8 @@ StatementConstructor(
     TCL_UNUSED(void *),
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
-    int objc, 			/* Parameter count */
-    Tcl_Obj *const objv[]	/* Parameter vector */
+    Tcl_Size objc, 			/* Parameter count */
+    Tcl_Obj *const *objv	/* Parameter vector */
 ) {
     Tcl_Object thisObject = Tcl_ObjectContextObject(context);
 				/* The current statement object */
@@ -2349,8 +2359,8 @@ StatementParamsMethod(
     TCL_UNUSED(void *),
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
-    int objc, 			/* Parameter count */
-    Tcl_Obj *const objv[]	/* Parameter vector */
+    Tcl_Size objc, 			/* Parameter count */
+    Tcl_Obj *const *objv	/* Parameter vector */
 ) {
     Tcl_Object thisObject = Tcl_ObjectContextObject(context);
 				/* The current statement object */
@@ -2435,8 +2445,8 @@ StatementParamtypeMethod(
     TCL_UNUSED(void *),
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
-    int objc, 			/* Parameter count */
-    Tcl_Obj *const objv[]	/* Parameter vector */
+    Tcl_Size objc, 			/* Parameter count */
+    Tcl_Obj *const *objv	/* Parameter vector */
 ) {
     Tcl_Object thisObject = Tcl_ObjectContextObject(context);
 				/* The current statement object */
@@ -2652,8 +2662,8 @@ ResultSetConstructor(
     TCL_UNUSED(void *),
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
-    int objc, 			/* Parameter count */
-    Tcl_Obj *const objv[]	/* Parameter vector */
+    Tcl_Size objc, 			/* Parameter count */
+    Tcl_Obj *const *objv	/* Parameter vector */
 ) {
     Tcl_Object thisObject = Tcl_ObjectContextObject(context);
 				/* The current result set object */
@@ -2954,8 +2964,8 @@ ResultSetColumnsMethod(
     TCL_UNUSED(void *),
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
-    int objc, 			/* Parameter count */
-    Tcl_Obj *const objv[]	/* Parameter vector */
+    Tcl_Size objc, 			/* Parameter count */
+    Tcl_Obj *const *objv	/* Parameter vector */
 ) {
     Tcl_Object thisObject = Tcl_ObjectContextObject(context);
 				/* The current result set object */
@@ -3005,8 +3015,8 @@ ResultSetNextrowMethod(
     void *clientData,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
-    int objc, 			/* Parameter count */
-    Tcl_Obj *const objv[]	/* Parameter vector */
+    Tcl_Size objc, 			/* Parameter count */
+    Tcl_Obj *const *objv	/* Parameter vector */
 ) {
     int lists = PTR2INT(clientData);
 
@@ -3198,8 +3208,8 @@ ResultSetRowcountMethod(
     TCL_UNUSED(void *),
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
-    int objc, 			/* Parameter count */
-    Tcl_Obj *const objv[]	/* Parameter vector */
+    Tcl_Size objc, 			/* Parameter count */
+    Tcl_Obj *const *objv	/* Parameter vector */
 ) {
     char * nTuples;
     Tcl_Object thisObject = Tcl_ObjectContextObject(context);
@@ -3247,6 +3257,59 @@ ResultSetRowcountMethod(
 #  define STRINGIFY1(x) #x
 #endif
 
+static const char version[] = PACKAGE_VERSION "+" STRINGIFY(TDBC_POSTGRES_VERSION_UUID)
+#if defined(__clang__) && defined(__clang_major__)
+    ".clang-" STRINGIFY(__clang_major__)
+#if __clang_minor__ < 10
+    "0"
+#endif
+    STRINGIFY(__clang_minor__)
+#endif
+#if defined(__cplusplus) && !defined(__OBJC__)
+    ".cplusplus"
+#endif
+#ifndef NDEBUG
+    ".debug"
+#endif
+#if !defined(__clang__) && !defined(__INTEL_COMPILER) && defined(__GNUC__)
+    ".gcc-" STRINGIFY(__GNUC__)
+#if __GNUC_MINOR__ < 10
+    "0"
+#endif
+    STRINGIFY(__GNUC_MINOR__)
+#endif
+#ifdef __INTEL_COMPILER
+    ".icc-" STRINGIFY(__INTEL_COMPILER)
+#endif
+#ifdef TCL_MEM_DEBUG
+    ".memdebug"
+#endif
+#if defined(_MSC_VER)
+    ".msvc-" STRINGIFY(_MSC_VER)
+#endif
+#ifdef USE_NMAKE
+    ".nmake"
+#endif
+#ifndef TCL_CFG_OPTIMIZED
+    ".no-optimize"
+#endif
+#ifdef __OBJC__
+    ".objective-c"
+#if defined(__cplusplus)
+    "plusplus"
+#endif
+#endif
+#ifdef TCL_CFG_PROFILED
+    ".profile"
+#endif
+#ifdef PURIFY
+    ".purify"
+#endif
+#ifdef STATIC_BUILD
+    ".static"
+#endif
+;
+
 #ifdef __cplusplus
 extern "C" {
 #endif  /* __cplusplus */
@@ -3273,60 +3336,14 @@ Tdbcpostgres_Init(
     }
 
     if (Tcl_GetCommandInfo(interp, "::tcl::build-info", &info)) {
+#if TCL_MAJOR_VERSION > 8
+	if (info.isNativeObjectProc == 2) {
+	    Tcl_CreateObjCommand2(interp, "::tdbc::postgres::build-info",
+		    info.objProc2, (void *)version, NULL);
+	} else
+#endif
 	Tcl_CreateObjCommand(interp, "::tdbc::postgres::build-info",
-		info.objProc, (void *)(
-		    PACKAGE_VERSION "+" STRINGIFY(TDBC_POSTGRES_VERSION_UUID)
-#if defined(__clang__) && defined(__clang_major__)
-			    ".clang-" STRINGIFY(__clang_major__)
-#if __clang_minor__ < 10
-			    "0"
-#endif
-			    STRINGIFY(__clang_minor__)
-#endif
-#if defined(__cplusplus) && !defined(__OBJC__)
-			    ".cplusplus"
-#endif
-#ifndef NDEBUG
-			    ".debug"
-#endif
-#if !defined(__clang__) && !defined(__INTEL_COMPILER) && defined(__GNUC__)
-			    ".gcc-" STRINGIFY(__GNUC__)
-#if __GNUC_MINOR__ < 10
-			    "0"
-#endif
-			    STRINGIFY(__GNUC_MINOR__)
-#endif
-#ifdef __INTEL_COMPILER
-			    ".icc-" STRINGIFY(__INTEL_COMPILER)
-#endif
-#ifdef TCL_MEM_DEBUG
-			    ".memdebug"
-#endif
-#if defined(_MSC_VER)
-			    ".msvc-" STRINGIFY(_MSC_VER)
-#endif
-#ifdef USE_NMAKE
-			    ".nmake"
-#endif
-#ifndef TCL_CFG_OPTIMIZED
-			    ".no-optimize"
-#endif
-#ifdef __OBJC__
-			    ".objective-c"
-#if defined(__cplusplus)
-			    "plusplus"
-#endif
-#endif
-#ifdef TCL_CFG_PROFILED
-			    ".profile"
-#endif
-#ifdef PURIFY
-			    ".purify"
-#endif
-#ifdef STATIC_BUILD
-			    ".static"
-#endif
-		), NULL);
+		info.objProc, (void *)version, NULL);
     }
 
     /* Provide the current package */

@@ -442,7 +442,7 @@ static int TransferResultError(Tcl_Interp* interp, PGresult * res);
 
 static Tcl_Obj* QueryConnectionOption(ConnectionData* cdata,
 				      Tcl_Interp* interp,
-				      int optionNum);
+				      Tcl_Size optionNum);
 static int ConfigureConnection(ConnectionData* cdata, Tcl_Interp* interp,
 			       Tcl_Size objc, Tcl_Obj *const *, Tcl_Size skip);
 static int ConnectionConstructor(void *clientData, Tcl_Interp* interp,
@@ -954,7 +954,7 @@ static Tcl_Obj*
 QueryConnectionOption (
     ConnectionData* cdata,	/* Connection data */
     Tcl_Interp* interp,		/* Tcl interpreter */
-    int optionNum		/* Position of the option in the table */
+    Tcl_Size optionNum		/* Position of the option in the table */
 ) {
     PerInterpData* pidata = cdata->pidata; /* Per-interpreter data */
     Tcl_Obj** literals = pidata->literals;
@@ -1070,7 +1070,7 @@ ConfigureConnection(
     int optionIndex;		/* Index of the current option in
 				 * ConnOptions */
     int optionValue;		/* Integer value of the current option */
-    int i;
+    Tcl_Size i;
     size_t j;
     char portval[10];		/* String representation of port number */
     char * encoding = NULL;	/* Selected encoding name */
@@ -2122,13 +2122,13 @@ ResultDescToTcl(
     char * fieldName;
     Tcl_InitHashTable(&names, TCL_STRING_KEYS);
     if (result != NULL) {
-	unsigned int fieldCount = PQnfields(result);
-	unsigned int i;
+	int fieldCount = PQnfields(result);
+	int i;
 	char numbuf[16];
 
 	for (i = 0; i < fieldCount; ++i) {
 	    int isNew;
-	    int count = 1;
+	    Tcl_Size count = 1;
 	    Tcl_Obj* nameObj;
 	    Tcl_HashEntry* entry;
 	    fieldName = PQfname(result, i);
@@ -2140,7 +2140,7 @@ ResultDescToTcl(
 		count = PTR2INT(Tcl_GetHashValue(entry));
 		++count;
 		Tcl_SetHashValue(entry, INT2PTR(count));
-		snprintf(numbuf, sizeof(numbuf), "#%d", count);
+		snprintf(numbuf, sizeof(numbuf), "#%" TCL_SIZE_MODIFIER "d", count);
 		Tcl_AppendToObj(nameObj, numbuf, -1);
 		entry = Tcl_CreateHashEntry(&names, Tcl_GetString(nameObj),
 					    &isNew);
@@ -2293,10 +2293,10 @@ StatementConstructor(
     Tcl_DecrRefCount(tokens);
 
     Tcl_ListObjLength(NULL, sdata->subVars, &sdata->nParams);
-    sdata->params = (ParamData*) ckalloc(sdata->nParams * sizeof(ParamData));
-    memset(sdata->params, 0, sdata->nParams * sizeof(ParamData));
-    sdata->paramDataTypes = (Oid*) ckalloc(sdata->nParams * sizeof(Oid));
-    memset(sdata->paramDataTypes, 0, sdata->nParams * sizeof(Oid));
+    sdata->params = (ParamData*) ckalloc((size_t)sdata->nParams * sizeof(ParamData));
+    memset(sdata->params, 0, (size_t)sdata->nParams * sizeof(ParamData));
+    sdata->paramDataTypes = (Oid*) ckalloc((size_t)sdata->nParams * sizeof(Oid));
+    memset(sdata->paramDataTypes, 0, (size_t)sdata->nParams * sizeof(Oid));
     for (i = 0; i < sdata->nParams; ++i) {
 	sdata->params[i].flags = PARAM_IN;
 	sdata->paramDataTypes[i] = UNTYPEDOID ;
@@ -2772,13 +2772,13 @@ ResultSetConstructor(
 	}
     }
 
-    paramValues = (const char**) ckalloc(sdata->nParams * sizeof(char* ));
-    paramLengths = (int *) ckalloc(sdata->nParams * sizeof(int *));
-    paramFormats = (int*) ckalloc(sdata->nParams * sizeof(int*));
-    paramNeedsFreeing = (char *)ckalloc(sdata->nParams);
-    paramTempObjs = (Tcl_Obj**) ckalloc(sdata->nParams * sizeof(Tcl_Obj*));
+    paramValues = (const char**) ckalloc((size_t)sdata->nParams * sizeof(char* ));
+    paramLengths = (int *) ckalloc((size_t)sdata->nParams * sizeof(int *));
+    paramFormats = (int*) ckalloc((size_t)sdata->nParams * sizeof(int*));
+    paramNeedsFreeing = (char *)ckalloc((size_t)sdata->nParams);
+    paramTempObjs = (Tcl_Obj**) ckalloc((size_t)sdata->nParams * sizeof(Tcl_Obj*));
 
-    memset(paramNeedsFreeing, 0, sdata->nParams);
+    memset(paramNeedsFreeing, 0, (size_t)sdata->nParams);
     for (i = 0; i < sdata->nParams; i++) {
 	paramTempObjs[i] = NULL;
     }
@@ -2815,9 +2815,9 @@ ResultSetConstructor(
 		}
 		paramValues[i] = (char *)ckalloc(sizeof(int16_t));
 		paramNeedsFreeing[i] = 1;
-		tmp16 = *(int*) bufPtr;
+		tmp16 = (int16_t)*(int*) bufPtr;
 		ckfree(bufPtr);
-		*(int16_t*)(paramValues[i])=htons(tmp16);
+		*(int16_t*)(paramValues[i])=(int16_t)htons(tmp16);
 		paramFormats[i] = 1;
 		paramLengths[i] = sizeof(int16_t);
 		break;
@@ -2830,9 +2830,9 @@ ResultSetConstructor(
 		}
 		paramValues[i] = (char *)ckalloc(sizeof(int32_t));
 		paramNeedsFreeing[i] = 1;
-		tmp32 = *(long*) bufPtr;
+		tmp32 = (int32_t)*(long*) bufPtr;
 		ckfree(bufPtr);
-		*((int32_t*)(paramValues[i]))=htonl(tmp32);
+		*((int32_t*)(paramValues[i]))=(int32_t)htonl(tmp32);
 		paramFormats[i] = 1;
 		paramLengths[i] = sizeof(int32_t);
 		break;
@@ -2859,7 +2859,7 @@ ResultSetConstructor(
 			paramValues[i] =
 			    Tcl_GetStringFromObj(paramTempObjs[i],
 						 &len);
-			paramLengths[i] = len;
+			paramLengths[i] = (int)len;
 		    } else {
 			goto convertString;
 				/* If Tcl can't parse it, let SQL try */
@@ -2879,7 +2879,7 @@ ResultSetConstructor(
 			paramValues[i] =
 			    Tcl_GetStringFromObj(paramTempObjs[i],
 						 &len);
-			paramLengths[i] = len;
+			paramLengths[i] = (int)len;
 		    } else {
 			goto convertString;
 				/* If Tcl can't parse it, let SQL try */
@@ -2892,7 +2892,7 @@ ResultSetConstructor(
 		paramValues[i] =
 		    (char*)Tcl_GetByteArrayFromObj(paramValObj,
 						   &len);
-		paramLengths[i] = len;
+		paramLengths[i] = (int)len;
 		break;
 
 	    default:
@@ -2900,7 +2900,7 @@ ResultSetConstructor(
 		paramFormats[i] = 0;
 		paramValues[i] = Tcl_GetStringFromObj(paramValObj,
 						      &len);
-		paramLengths[i] = len;
+		paramLengths[i] = (int)len;
 		break;
 	    }
 	} else {
@@ -2911,7 +2911,7 @@ ResultSetConstructor(
 
     /* Execute the statement */
     rdata->execResult = PQexecPrepared(cdata->pgPtr, rdata->stmtName,
-				       sdata->nParams, paramValues,
+				       (int)sdata->nParams, paramValues,
 				       paramLengths, paramFormats, 0);
     if (TransferResultError(interp, rdata->execResult) != TCL_OK) {
 	goto freeParamTables;
@@ -3069,10 +3069,10 @@ ResultSetNextrowMethod(
     /* Retrieve one column at a time. */
     for (i = 0; i < nColumns; ++i) {
 	colObj = NULL;
-	if (PQgetisnull(rdata->execResult, rdata->rowCount, i) == 0) {
-	    buffSize = PQgetlength(rdata->execResult, rdata->rowCount, i);
-	    buffer = PQgetvalue(rdata->execResult, rdata->rowCount, i);
-	    if (PQftype(rdata->execResult, i) == BYTEAOID) {
+	if (PQgetisnull(rdata->execResult, rdata->rowCount, (int)i) == 0) {
+	    buffSize = PQgetlength(rdata->execResult, rdata->rowCount, (int)i);
+	    buffer = PQgetvalue(rdata->execResult, rdata->rowCount, (int)i);
+	    if (PQftype(rdata->execResult, (int)i) == BYTEAOID) {
 		/*
 		 * Postgres returns backslash-escape sequences for
 		 * binary data. Substitute them away.
@@ -3369,7 +3369,7 @@ Tdbcpostgres_Init(
 	    Tcl_CreateHashEntry(&(pidata->typeNumHash),
 				INT2PTR(dataTypes[i].oid),
 				&isNew);
-	Tcl_Obj* nameObj = Tcl_NewStringObj(dataTypes[i].name, -1);
+	nameObj = Tcl_NewStringObj(dataTypes[i].name, -1);
 	Tcl_IncrRefCount(nameObj);
 	Tcl_SetHashValue(entry, (void *) nameObj);
     }
@@ -3388,7 +3388,7 @@ Tdbcpostgres_Init(
     Tcl_DecrRefCount(nameObj);
     curClass = Tcl_GetObjectAsClass(curClassObject);
     Tcl_ClassSetConstructor(interp, curClass,
-	    Tcl_NewMethod(interp, curClass, NULL, 1,
+	    Tcl_NewMethod2(interp, curClass, NULL, 1,
 		&ConnectionConstructorType,
 		(void *) pidata));
 
@@ -3397,7 +3397,7 @@ Tdbcpostgres_Init(
     for (i = 0; ConnectionMethods[i] != NULL; ++i) {
 	nameObj = Tcl_NewStringObj(ConnectionMethods[i]->name, -1);
 	Tcl_IncrRefCount(nameObj);
-	Tcl_NewMethod(interp, curClass, nameObj, 1, ConnectionMethods[i],
+	Tcl_NewMethod2(interp, curClass, nameObj, 1, ConnectionMethods[i],
 			   NULL);
 	Tcl_DecrRefCount(nameObj);
     }
@@ -3416,7 +3416,7 @@ Tdbcpostgres_Init(
     /* Attach the constructor to the 'statement' class */
 
     Tcl_ClassSetConstructor(interp, curClass,
-			    Tcl_NewMethod(interp, curClass, NULL, 1,
+			    Tcl_NewMethod2(interp, curClass, NULL, 1,
 					  &StatementConstructorType,
 					  NULL));
 
@@ -3425,7 +3425,7 @@ Tdbcpostgres_Init(
     for (i = 0; StatementMethods[i] != NULL; ++i) {
 	nameObj = Tcl_NewStringObj(StatementMethods[i]->name, -1);
 	Tcl_IncrRefCount(nameObj);
-	Tcl_NewMethod(interp, curClass, nameObj, 1, StatementMethods[i],
+	Tcl_NewMethod2(interp, curClass, nameObj, 1, StatementMethods[i],
 			   NULL);
 	Tcl_DecrRefCount(nameObj);
     }
@@ -3444,7 +3444,7 @@ Tdbcpostgres_Init(
     /* Attach the constructor to the 'resultSet' class */
 
     Tcl_ClassSetConstructor(interp, curClass,
-			    Tcl_NewMethod(interp, curClass, NULL, 1,
+			    Tcl_NewMethod2(interp, curClass, NULL, 1,
 					  &ResultSetConstructorType,
 					  NULL));
 
@@ -3453,18 +3453,18 @@ Tdbcpostgres_Init(
     for (i = 0; ResultSetMethods[i] != NULL; ++i) {
 	nameObj = Tcl_NewStringObj(ResultSetMethods[i]->name, -1);
 	Tcl_IncrRefCount(nameObj);
-	Tcl_NewMethod(interp, curClass, nameObj, 1, ResultSetMethods[i],
+	Tcl_NewMethod2(interp, curClass, nameObj, 1, ResultSetMethods[i],
 			   NULL);
 	Tcl_DecrRefCount(nameObj);
     }
     nameObj = Tcl_NewStringObj("nextlist", -1);
     Tcl_IncrRefCount(nameObj);
-    Tcl_NewMethod(interp, curClass, nameObj, 1, &ResultSetNextrowMethodType,
+    Tcl_NewMethod2(interp, curClass, nameObj, 1, &ResultSetNextrowMethodType,
 		  INT2PTR(1));
     Tcl_DecrRefCount(nameObj);
     nameObj = Tcl_NewStringObj("nextdict", -1);
     Tcl_IncrRefCount(nameObj);
-    Tcl_NewMethod(interp, curClass, nameObj, 1, &ResultSetNextrowMethodType,
+    Tcl_NewMethod2(interp, curClass, nameObj, 1, &ResultSetNextrowMethodType,
 		  INT2PTR(0));
     Tcl_DecrRefCount(nameObj);
 

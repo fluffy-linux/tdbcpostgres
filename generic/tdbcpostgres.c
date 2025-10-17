@@ -227,7 +227,7 @@ static char* _PQtty(const PGconn* conn) { return PQtty(conn); }
 static const struct {
     const char * name;		    /* Option name */
     enum OptType type;		    /* Option data type */
-    int info;		    	    /* Option index or flag value */
+    int info;			    /* Option index or flag value */
     int flags;			    /* Flags - modifiable; SSL related;
 				     * is an alias */
     char *(*queryF)(const PGconn*); /* Function used to determine the
@@ -281,7 +281,7 @@ typedef struct PerInterpData {
 /*
  * Structure that carries the data for a Postgres connection
  *
- * 	This structure is reference counted, to enable deferring its
+ *	This structure is reference counted, to enable deferring its
  *	destruction until the last statement or result set that refers
  *	to it is destroyed.
  */
@@ -301,7 +301,7 @@ typedef struct ConnectionData {
  * Flags for the state of an POSTGRES connection
  */
 
-#define CONN_FLAG_IN_XCN	0x1 	/* Transaction is in progress */
+#define CONN_FLAG_IN_XCN	0x1	/* Transaction is in progress */
 
 #define IncrConnectionRefCount(x) \
     do {			  \
@@ -320,7 +320,7 @@ typedef struct ConnectionData {
  *
  *	Just as with connections, statements need to defer taking down
  *	their client data until other objects (i.e., result sets) that
- * 	refer to them have had a chance to clean up. Hence, this
+ *	refer to them have had a chance to clean up. Hence, this
  *	structure is reference counted as well.
  */
 
@@ -371,8 +371,8 @@ typedef struct ParamData {
 } ParamData;
 
 #define PARAM_KNOWN	1<<0	/* Something is known about the parameter */
-#define PARAM_IN 	1<<1	/* Parameter is an input parameter */
-#define PARAM_OUT 	1<<2	/* Parameter is an output parameter */
+#define PARAM_IN	1<<1	/* Parameter is an input parameter */
+#define PARAM_OUT	1<<2	/* Parameter is an output parameter */
 				/* (Both bits are set if parameter is
 				 * an INOUT parameter) */
 
@@ -758,7 +758,7 @@ static int ExecSimpleQuery(
     const char * query,		/* Query to execute */
     PGresult** resOut		/* Optional handle to result struct */
 ) {
-    PGresult * res; 		/* Query result */
+    PGresult * res;		/* Query result */
 
     /* Execute the query */
 
@@ -1409,7 +1409,7 @@ ConnectionBegintransactionMethod(
  * ConnectionCommitMethod --
  *
  *	Method that requests that a pending transaction against a database
- * 	be committed.
+ *	be committed.
  *
  * Usage:
  *	$connection commit
@@ -1470,7 +1470,7 @@ ConnectionCommitMethod(
  *	in the database (optionally matching a given pattern)
  *
  * Usage:
- * 	$connection columns table ?pattern?
+ *	$connection columns table ?pattern?
  *
  * Parameters:
  *	None.
@@ -1683,10 +1683,10 @@ static int ConnectionConfigureMethod(
  * ConnectionRollbackMethod --
  *
  *	Method that requests that a pending transaction against a database
- * 	be rolled back.
+ *	be rolled back.
  *
  * Usage:
- * 	$connection rollback
+ *	$connection rollback
  *
  * Parameters:
  *	None.
@@ -1744,7 +1744,7 @@ ConnectionRollbackMethod(
  *	matching a given pattern
  *
  * Usage:
- * 	$connection tables ?pattern?
+ *	$connection tables ?pattern?
  *
  * Parameters:
  *	None.
@@ -2185,7 +2185,7 @@ StatementConstructor(
     TCL_UNUSED(void *),
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
-    Tcl_Size objc, 			/* Parameter count */
+    Tcl_Size objc,			/* Parameter count */
     Tcl_Obj *const *objv	/* Parameter vector */
 ) {
     Tcl_Object thisObject = Tcl_ObjectContextObject(context);
@@ -2359,7 +2359,7 @@ StatementParamsMethod(
     TCL_UNUSED(void *),
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
-    Tcl_Size objc, 			/* Parameter count */
+    Tcl_Size objc,			/* Parameter count */
     Tcl_Obj *const *objv	/* Parameter vector */
 ) {
     Tcl_Object thisObject = Tcl_ObjectContextObject(context);
@@ -2445,7 +2445,7 @@ StatementParamtypeMethod(
     TCL_UNUSED(void *),
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
-    Tcl_Size objc, 			/* Parameter count */
+    Tcl_Size objc,			/* Parameter count */
     Tcl_Obj *const *objv	/* Parameter vector */
 ) {
     Tcl_Object thisObject = Tcl_ObjectContextObject(context);
@@ -2457,7 +2457,7 @@ StatementParamtypeMethod(
 	const char* name;
 	int flags;
     } directions[] = {
-	{ "in", 	PARAM_IN },
+	{ "in",	PARAM_IN },
 	{ "out",	PARAM_OUT },
 	{ "inout",	PARAM_IN | PARAM_OUT },
 	{ NULL,		0 }
@@ -2662,9 +2662,9 @@ ResultSetConstructor(
     TCL_UNUSED(void *),
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
-    Tcl_Size objc, 			/* Parameter count */
-    Tcl_Obj *const *objv	/* Parameter vector */
-) {
+    Tcl_Size objc,			/* Parameter count */
+    Tcl_Obj *const *objv)	/* Parameter vector */
+{
     Tcl_Object thisObject = Tcl_ObjectContextObject(context);
 				/* The current result set object */
     Tcl_Size skip = Tcl_ObjectContextSkippedArgs(context);
@@ -2964,7 +2964,7 @@ ResultSetColumnsMethod(
     TCL_UNUSED(void *),
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
-    Tcl_Size objc, 			/* Parameter count */
+    Tcl_Size objc,			/* Parameter count */
     Tcl_Obj *const *objv	/* Parameter vector */
 ) {
     Tcl_Object thisObject = Tcl_ObjectContextObject(context);
@@ -3015,7 +3015,7 @@ ResultSetNextrowMethod(
     void *clientData,	/* Not used */
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
-    Tcl_Size objc, 			/* Parameter count */
+    Tcl_Size objc,			/* Parameter count */
     Tcl_Obj *const *objv	/* Parameter vector */
 ) {
     int lists = PTR2INT(clientData);
@@ -3208,7 +3208,7 @@ ResultSetRowcountMethod(
     TCL_UNUSED(void *),
     Tcl_Interp* interp,		/* Tcl interpreter */
     Tcl_ObjectContext context,	/* Object context  */
-    Tcl_Size objc, 			/* Parameter count */
+    Tcl_Size objc,			/* Parameter count */
     Tcl_Obj *const *objv	/* Parameter vector */
 ) {
     char * nTuples;

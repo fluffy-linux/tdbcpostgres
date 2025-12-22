@@ -982,7 +982,7 @@ QueryConnectionOption (
 		return NULL;
 	    }
 	    value = PQgetvalue(res, 0, 0);
-	    isoName = (char*) ckalloc(strlen(value) + 1);
+	    isoName = (char*)Tcl_Alloc(strlen(value) + 1);
 	    strcpy(isoName, value);
 	    PQclear(res);
 
@@ -1005,7 +1005,7 @@ QueryConnectionOption (
 		   && strcmp(isoName, TclIsolationLevels[i])) {
 		i += 1;
 	    }
-	    ckfree(isoName);
+	    Tcl_Free(isoName);
 	    if (TclIsolationLevels[i] != NULL) {
 		cdata->isolation = i;
 	    } else {
@@ -1325,7 +1325,7 @@ ConnectionConstructor(
 
     /* Hang client data on this connection */
 
-    cdata = (ConnectionData*) ckalloc(sizeof(ConnectionData));
+    cdata = (ConnectionData*)Tcl_Alloc(sizeof(ConnectionData));
     memset(cdata, 0, sizeof(ConnectionData));
     cdata->refCount = 1;
     cdata->pidata = pidata;
@@ -1858,7 +1858,7 @@ DeleteConnection(
 	PQfinish(cdata->pgPtr);
     }
     DecrPerInterpRefCount(cdata->pidata);
-    ckfree(cdata);
+    Tcl_Free(cdata);
 }
 
 /*
@@ -1963,7 +1963,7 @@ GenStatementName(
     char* retval;
     cdata->stmtCounter += 1;
     snprintf(stmtName, 30, "statement%d", cdata->stmtCounter);
-    retval = (char *)ckalloc(strlen(stmtName) + 1);
+    retval = (char *)Tcl_Alloc(strlen(stmtName) + 1);
     strcpy(retval, stmtName);
     return retval;
 }
@@ -2011,7 +2011,7 @@ static StatementData*
 NewStatement(
     ConnectionData* cdata	/* Instance data for the connection */
 ) {
-    StatementData* sdata = (StatementData*) ckalloc(sizeof(StatementData));
+    StatementData* sdata = (StatementData*)Tcl_Alloc(sizeof(StatementData));
     memset(sdata, 0, sizeof(StatementData));
     sdata->refCount = 1;
     sdata->cdata = cdata;
@@ -2293,13 +2293,13 @@ StatementConstructor(
     Tcl_DecrRefCount(tokens);
 
     Tcl_ListObjLength(NULL, sdata->subVars, &sdata->nParams);
-    sdata->params = (ParamData*) ckalloc((size_t)sdata->nParams * sizeof(ParamData));
+    sdata->params = (ParamData*)Tcl_Alloc((size_t)sdata->nParams * sizeof(ParamData));
     memset(sdata->params, 0, (size_t)sdata->nParams * sizeof(ParamData));
-    sdata->paramDataTypes = (Oid*) ckalloc((size_t)sdata->nParams * sizeof(Oid));
+    sdata->paramDataTypes = (Oid *)Tcl_Alloc((size_t)sdata->nParams * sizeof(Oid));
     memset(sdata->paramDataTypes, 0, (size_t)sdata->nParams * sizeof(Oid));
     for (i = 0; i < sdata->nParams; ++i) {
 	sdata->params[i].flags = PARAM_IN;
-	sdata->paramDataTypes[i] = UNTYPEDOID ;
+	sdata->paramDataTypes[i] = UNTYPEDOID;
 	sdata->params[i].precision = 0;
 	sdata->params[i].scale = 0;
     }
@@ -2587,20 +2587,20 @@ DeleteStatement(
     }
     if (sdata->stmtName != NULL) {
 	UnallocateStatement(sdata->cdata->pgPtr, sdata->stmtName);
-	ckfree(sdata->stmtName);
+	Tcl_Free(sdata->stmtName);
     }
     if (sdata->nativeSql != NULL) {
 	Tcl_DecrRefCount(sdata->nativeSql);
     }
     if (sdata->params != NULL) {
-	ckfree(sdata->params);
+	Tcl_Free(sdata->params);
     }
     if (sdata->paramDataTypes != NULL) {
-	ckfree(sdata->paramDataTypes);
+	Tcl_Free(sdata->paramDataTypes);
     }
     Tcl_DecrRefCount(sdata->subVars);
     DecrConnectionRefCount(sdata->cdata);
-    ckfree(sdata);
+    Tcl_Free(sdata);
 }
 
 /*
@@ -2718,7 +2718,7 @@ ResultSetConstructor(
     }
     cdata = sdata->cdata;
 
-    rdata = (ResultSetData*) ckalloc(sizeof(ResultSetData));
+    rdata = (ResultSetData*)Tcl_Alloc(sizeof(ResultSetData));
     memset(rdata, 0, sizeof(ResultSetData));
     rdata->refCount = 1;
     rdata->sdata = sdata;
@@ -2756,7 +2756,7 @@ ResultSetConstructor(
 
 	if (sdata->paramTypesChanged) {
 	    UnallocateStatement(cdata->pgPtr, sdata->stmtName);
-	    ckfree(sdata->stmtName);
+	    Tcl_Free(sdata->stmtName);
 	    sdata->stmtName = GenStatementName(cdata);
 	    rdata->stmtName = sdata->stmtName;
 	    res = PrepareStatement(interp, sdata, NULL);
@@ -2772,11 +2772,11 @@ ResultSetConstructor(
 	}
     }
 
-    paramValues = (const char**) ckalloc((size_t)sdata->nParams * sizeof(char* ));
-    paramLengths = (int *) ckalloc((size_t)sdata->nParams * sizeof(int *));
-    paramFormats = (int*) ckalloc((size_t)sdata->nParams * sizeof(int*));
-    paramNeedsFreeing = (char *)ckalloc((size_t)sdata->nParams);
-    paramTempObjs = (Tcl_Obj**) ckalloc((size_t)sdata->nParams * sizeof(Tcl_Obj*));
+    paramValues = (const char **)Tcl_Alloc((size_t)sdata->nParams * sizeof(char* ));
+    paramLengths = (int *)Tcl_Alloc((size_t)sdata->nParams * sizeof(int *));
+    paramFormats = (int *)Tcl_Alloc((size_t)sdata->nParams * sizeof(int*));
+    paramNeedsFreeing = (char *)Tcl_Alloc((size_t)sdata->nParams);
+    paramTempObjs = (Tcl_Obj **)Tcl_Alloc((size_t)sdata->nParams * sizeof(Tcl_Obj*));
 
     memset(paramNeedsFreeing, 0, (size_t)sdata->nParams);
     for (i = 0; i < sdata->nParams; i++) {
@@ -2808,30 +2808,30 @@ ResultSetConstructor(
 
 	    switch (sdata->paramDataTypes[i]) {
 	    case INT2OID:
-		bufPtr = (char *)ckalloc(sizeof(int));
+		bufPtr = (char *)Tcl_Alloc(sizeof(int));
 		if (Tcl_GetIntFromObj(interp, paramValObj,
 				      (int*) bufPtr) != TCL_OK) {
 		    goto freeParamTables;
 		}
-		paramValues[i] = (char *)ckalloc(sizeof(int16_t));
+		paramValues[i] = (char *)Tcl_Alloc(sizeof(int16_t));
 		paramNeedsFreeing[i] = 1;
 		tmp16 = (int16_t)*(int*) bufPtr;
-		ckfree(bufPtr);
+		Tcl_Free(bufPtr);
 		*(int16_t*)(paramValues[i])=(int16_t)htons(tmp16);
 		paramFormats[i] = 1;
 		paramLengths[i] = sizeof(int16_t);
 		break;
 
 	    case INT4OID:
-		bufPtr = (char *)ckalloc(sizeof(long));
+		bufPtr = (char *)Tcl_Alloc(sizeof(long));
 		if (Tcl_GetLongFromObj(interp, paramValObj,
 				       (long*) bufPtr) != TCL_OK) {
 		    goto freeParamTables;
 		}
-		paramValues[i] = (char *)ckalloc(sizeof(int32_t));
+		paramValues[i] = (char *)Tcl_Alloc(sizeof(int32_t));
 		paramNeedsFreeing[i] = 1;
 		tmp32 = (int32_t)*(long*) bufPtr;
-		ckfree(bufPtr);
+		Tcl_Free(bufPtr);
 		*((int32_t*)(paramValues[i]))=(int32_t)htonl(tmp32);
 		paramFormats[i] = 1;
 		paramLengths[i] = sizeof(int32_t);
@@ -2926,18 +2926,18 @@ ResultSetConstructor(
  freeParamTables:
     for (i = 0; i < sdata->nParams; ++i) {
 	if (paramNeedsFreeing[i]) {
-	    ckfree((void *)paramValues[i]);
+	    Tcl_Free((void *)paramValues[i]);
 	}
 	if (paramTempObjs[i] != NULL) {
 	    Tcl_DecrRefCount(paramTempObjs[i]);
 	}
     }
 
-    ckfree(paramValues);
-    ckfree(paramLengths);
-    ckfree(paramFormats);
-    ckfree(paramNeedsFreeing);
-    ckfree(paramTempObjs);
+    Tcl_Free(paramValues);
+    Tcl_Free(paramLengths);
+    Tcl_Free(paramFormats);
+    Tcl_Free(paramNeedsFreeing);
+    Tcl_Free(paramTempObjs);
 
     return status;
 
@@ -3146,7 +3146,7 @@ DeleteResultSet(
     if (rdata->stmtName != NULL) {
 	if (rdata->stmtName != sdata->stmtName) {
 	    UnallocateStatement(sdata->cdata->pgPtr, rdata->stmtName);
-	    ckfree(rdata->stmtName);
+	    Tcl_Free(rdata->stmtName);
 	} else {
 	    sdata->flags &= ~ STMT_FLAG_BUSY;
 	}
@@ -3155,7 +3155,7 @@ DeleteResultSet(
 	PQclear(rdata->execResult);
     }
     DecrStatementRefCount(rdata->sdata);
-    ckfree(rdata);
+    Tcl_Free(rdata);
 }
 
 /*
@@ -3356,7 +3356,7 @@ Tdbcpostgres_Init(
      * Create per-interpreter data for the package
      */
 
-    pidata = (PerInterpData*) ckalloc(sizeof(PerInterpData));
+    pidata = (PerInterpData*)Tcl_Alloc(sizeof(PerInterpData));
     pidata->refCount = 1;
     for (i = 0; i < LIT__END; ++i) {
 	pidata->literals[i] = Tcl_NewStringObj(LiteralValues[i], -1);
@@ -3522,7 +3522,7 @@ DeletePerInterpData(
    for (i = 0; i < LIT__END; ++i) {
        Tcl_DecrRefCount(pidata->literals[i]);
    }
-   ckfree(pidata);
+   Tcl_Free(pidata);
 
    Tcl_MutexLock(&pgMutex);
    if (--pgRefCount == 0) {

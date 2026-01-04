@@ -111,7 +111,7 @@ const pqStubDefs* pqStubs = &pqStubsTable;
  */
 
 MODULE_SCOPE Tcl_LoadHandle
-PostgresqlInitStubs(Tcl_Interp* interp)
+PostgresqlInitStubs(Tcl_Interp * interp)
 {
     int i;
     size_t j;

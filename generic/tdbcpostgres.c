@@ -2694,6 +2694,7 @@ ResultSetConstructor(
 				 * its memory released */
     Tcl_Obj **paramTempObjs;	/* Temporary parameter objects allocated
 				 * to canonicalize numeric parameter values */
+    Tcl_Obj *toBeFreed;
 
     PGresult *res;		/* Temporary result */
     int i;
@@ -2925,8 +2926,12 @@ ResultSetConstructor(
 	goto freeParamTables;
     }
 
+    toBeFreed = sdata->columnNames;
     sdata->columnNames = ResultDescToTcl(rdata->execResult);
     Tcl_IncrRefCount(sdata->columnNames);
+    if (toBeFreed) {
+	Tcl_DecrRefCount(toBeFreed);
+    }
     status = TCL_OK;
 
     /* Clean up allocated memory */

@@ -32,7 +32,7 @@ PRJ_DEFINES = $(PRJ_DEFINES) -I$(TMP_DIR)
 !if [echo REM = This file is generated from Makefile.vc > versions.vc]
 !endif
 !if [echo TCL_VERSION_REQ = \>> versions.vc] \
-   && [nmakehlp -V ..\configure.ac TCL_VERSION_REQ >> versions.vc]
+   && [$(NMAKEHLP_NATIVE) -V ..\configure.ac TCL_VERSION_REQ >> versions.vc]
 !endif
 !include "versions.vc"
 
@@ -52,14 +52,14 @@ PRJ_HEADERS = \
 # TDBC should suffice. But that needs additional machinery not implemented
 # yet.
 !if [echo TDBC_DIR = \> nmakehlp.out] \
-   || [nmakehlp -L generic\tdbcInt.h >> nmakehlp.out]
+   || [$(NMAKEHLP_NATIVE) -L generic\tdbcInt.h >> nmakehlp.out]
 !error Could not locate TDBC source directory.
 !endif
 !include nmakehlp.out
 
 # Get the TDBC version from its configure.ac
 !if [echo TDBC_DOTVERSION = \> versions.vc] \
-   && [nmakehlp -V "$(TDBC_DIR)\configure.ac" tdbc >> versions.vc]
+   && [$(NMAKEHLP_NATIVE) -V "$(TDBC_DIR)\configure.ac" tdbc >> versions.vc]
 !error Could not retrieve TDBC version.
 !endif
 !include versions.vc
@@ -93,7 +93,7 @@ install: default-install-docs-n
 # all replacements below so define our own target.
 pkgindex:   $(OUT_DIR)\pkgIndex.tcl
 $(OUT_DIR)\pkgIndex.tcl: $(ROOT)\pkgIndex.tcl.in
-	@nmakehlp -s << $** > $@
+	@$(NMAKEHLP_NATIVE) -s << $** > $@
 @PACKAGE_NAME@        $(PROJECT)
 @PACKAGE_VERSION@     $(DOTVERSION)
 @TCL_VERSION_REQ@     $(TCL_VERSION_REQ)

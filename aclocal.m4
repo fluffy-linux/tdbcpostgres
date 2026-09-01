@@ -81,6 +81,44 @@ AC_DEFUN([TEAX_LINK_LINE], [
     ])
     AC_SUBST($1)])
 
+dnl Compile in an absolute path to the client library, which
+dnl PostgresqlInitStubs() tries before searching by bare name.  Needed on
+dnl macOS, where dlopen() searches neither /opt/homebrew nor /usr/local/lib,
+dnl and where DYLD_LIBRARY_PATH is stripped from hardened processes.  The
+dnl opt/*/lib entries cover package managers that keep a formula unlinked.
+dnl Must be called after TEA_CONFIG_CFLAGS, which sets SHLIB_SUFFIX.
+AC_DEFUN([TEAX_PQ_CLIENT_LIBRARY], [
+    AC_ARG_WITH([pq-library],
+	AS_HELP_STRING([--with-pq-library=FILE],
+	    [absolute path of the PostgreSQL client library, libpq, to try
+	     first at run time; "no" to disable, default is to search]),
+	[teax_pq_lib=$withval], [teax_pq_lib=auto])
+    AS_CASE([$teax_pq_lib],
+	[no], [teax_pq_lib=""],
+	[auto|yes], [
+	    AC_MSG_CHECKING([for a client library to compile in])
+	    teax_pq_lib=""
+	    for teax_dir in ${HOMEBREW_PREFIX:+$HOMEBREW_PREFIX/opt/libpq/lib} \
+		    /opt/homebrew/opt/libpq/lib /opt/homebrew/opt/postgresql*/lib \
+		    /opt/homebrew/lib /usr/local/opt/libpq/lib \
+		    /usr/local/lib /opt/local/lib /usr/local/pgsql/lib ; do
+		for teax_try in "$teax_dir/libpq$SHLIB_SUFFIX" \
+			"$teax_dir/libpq".*"$SHLIB_SUFFIX" ; do
+		    AS_IF([test -f "$teax_try"], [
+			teax_pq_lib=$teax_try
+			break 2])
+		done
+	    done
+	    AS_IF([test -n "$teax_pq_lib"],
+		[AC_MSG_RESULT([$teax_pq_lib])],
+		[AC_MSG_RESULT([none, will search by name at run time])])],
+	[*], [
+	    AS_IF([test -f "$teax_pq_lib"], [],
+		[AC_MSG_ERROR([no such file: $teax_pq_lib])])])
+    AS_IF([test -n "$teax_pq_lib"], [
+	AC_DEFINE_UNQUOTED([PQ_CLIENT_LIBRARY], ["$teax_pq_lib"],
+	    [Client library to load before searching by name.])])])
+
 dnl Local Variables:
 dnl mode: autoconf
 dnl End:

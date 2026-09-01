@@ -761,6 +761,7 @@ enable_64bit
 enable_64bit_vis
 enable_rpath
 enable_symbols
+with_pq_library
 with_tclsh
 '
       ac_precious_vars='build_alias
@@ -1407,6 +1408,9 @@ Optional Packages:
   --with-tcl8             Compile for Tcl8 in Tcl9 environment
   --with-tdbc              directory containing tdbc configuration (tdbcConfig.sh)
   --with-tclinclude       directory containing the public Tcl header files
+  --with-pq-library=FILE  absolute path of the PostgreSQL client library,
+                          libpq, to try first at run time; "no" to disable,
+                          default is to search
   --with-tclsh            Path to tclsh executable
 
 Some influential environment variables:
@@ -9749,6 +9753,74 @@ printf '%s\n' "enabled $tcl_ok debugging" >&6; }
 	fi
     fi
 
+
+#--------------------------------------------------------------------
+# Find a client library whose absolute path can be compiled in, so that
+# the package still loads where dlopen() cannot resolve a bare name.
+# Must follow TEA_CONFIG_CFLAGS, which sets SHLIB_SUFFIX.
+#--------------------------------------------------------------------
+
+
+
+# Check whether --with-pq-library was given.
+if test ${with_pq_library+y}
+then :
+  withval=$with_pq_library; teax_pq_lib=$withval
+else case e in #(
+  e) teax_pq_lib=auto ;;
+esac
+fi
+
+    case $teax_pq_lib in #(
+  no) :
+    teax_pq_lib="" ;; #(
+  auto|yes) :
+
+	    { printf '%s\n' "$as_me:${as_lineno-$LINENO}: checking for a client library to compile in" >&5
+printf %s "checking for a client library to compile in... " >&6; }
+	    teax_pq_lib=""
+	    for teax_dir in ${HOMEBREW_PREFIX:+$HOMEBREW_PREFIX/opt/libpq/lib} \
+		    /opt/homebrew/opt/libpq/lib /opt/homebrew/opt/postgresql*/lib \
+		    /opt/homebrew/lib /usr/local/opt/libpq/lib \
+		    /usr/local/lib /opt/local/lib /usr/local/pgsql/lib ; do
+		for teax_try in "$teax_dir/libpq$SHLIB_SUFFIX" \
+			"$teax_dir/libpq".*"$SHLIB_SUFFIX" ; do
+		    if test -f "$teax_try"
+then :
+
+			teax_pq_lib=$teax_try
+			break 2
+fi
+		done
+	    done
+	    if test -n "$teax_pq_lib"
+then :
+  { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: $teax_pq_lib" >&5
+printf '%s\n' "$teax_pq_lib" >&6; }
+else case e in #(
+  e) { printf '%s\n' "$as_me:${as_lineno-$LINENO}: result: none, will search by name at run time" >&5
+printf '%s\n' "none, will search by name at run time" >&6; } ;;
+esac
+fi ;; #(
+  *) :
+
+	    if test -f "$teax_pq_lib"
+then :
+
+else case e in #(
+  e) as_fn_error $? "no such file: $teax_pq_lib" "$LINENO" 5 ;;
+esac
+fi ;; #(
+  *) :
+     ;;
+esac
+    if test -n "$teax_pq_lib"
+then :
+
+
+printf '%s\n' "#define PQ_CLIENT_LIBRARY \"$teax_pq_lib\"" >>confdefs.h
+
+fi
 
 #--------------------------------------------------------------------
 # Integer pointer types used by the (U)INT2PTR / PTR2(U)INT macros.

@@ -132,18 +132,30 @@ PostgresqlInitStubs(Tcl_Interp * interp)
     /* Walk the list of possible library names to find an PostgreSQL client */
 
     status = TCL_ERROR;
+#ifdef PQ_CLIENT_LIBRARY
+    path = Tcl_NewStringObj(PQ_CLIENT_LIBRARY, -1);
+    Tcl_IncrRefCount(path);
+    Tcl_ResetResult(interp);
+    status = Tcl_LoadFile(interp, path, pqSymbolNames, 0,
+			  &pqStubsTable, &handle);
+    Tcl_DecrRefCount(path);
+#endif
+
     for (i = 0; status == TCL_ERROR && pqStubLibNames[i] != NULL; ++i) {
 	for (j = 0; status == TCL_ERROR && (j < sizeof(pqSuffixes)/sizeof(pqSuffixes[0])); ++j) {
 	    path = Tcl_NewStringObj(LIBPREFIX, -1);
 	    Tcl_AppendToObj(path, pqStubLibNames[i], -1);
-#ifdef __CYGWIN__
+#if defined(__CYGWIN__)
 	    if (*pqSuffixes[j]) {
 		Tcl_AppendToObj(path, "-", -1);
 		Tcl_AppendToObj(path, pqSuffixes[j]+1, -1);
 	    }
-#endif
 	    Tcl_AppendObjToObj(path, shlibext);
-#ifndef __CYGWIN__
+#elif defined(__APPLE__)
+	    Tcl_AppendToObj(path, pqSuffixes[j], -1);
+	    Tcl_AppendObjToObj(path, shlibext);
+#else
+	    Tcl_AppendObjToObj(path, shlibext);
 	    Tcl_AppendToObj(path, pqSuffixes[j], -1);
 #endif
 	    Tcl_IncrRefCount(path);

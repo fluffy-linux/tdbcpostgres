@@ -204,6 +204,14 @@ TEA_CONFIG_CFLAGS
 TEA_ENABLE_SYMBOLS
 
 #--------------------------------------------------------------------
+# Find a client library whose absolute path can be compiled in, so that
+# the package still loads where dlopen() cannot resolve a bare name.
+# Must follow TEA_CONFIG_CFLAGS, which sets SHLIB_SUFFIX.
+#--------------------------------------------------------------------
+
+TEAX_PQ_CLIENT_LIBRARY
+
+#--------------------------------------------------------------------
 # Integer pointer types used by the (U)INT2PTR / PTR2(U)INT macros.
 #--------------------------------------------------------------------
 

@@ -136,14 +136,17 @@ PostgresqlInitStubs(Tcl_Interp * interp)
 	for (j = 0; status == TCL_ERROR && (j < sizeof(pqSuffixes)/sizeof(pqSuffixes[0])); ++j) {
 	    path = Tcl_NewStringObj(LIBPREFIX, -1);
 	    Tcl_AppendToObj(path, pqStubLibNames[i], -1);
-#ifdef __CYGWIN__
+#if defined(__CYGWIN__)
 	    if (*pqSuffixes[j]) {
 		Tcl_AppendToObj(path, "-", -1);
 		Tcl_AppendToObj(path, pqSuffixes[j]+1, -1);
 	    }
-#endif
 	    Tcl_AppendObjToObj(path, shlibext);
-#ifndef __CYGWIN__
+#elif defined(__APPLE__)
+	    Tcl_AppendToObj(path, pqSuffixes[j], -1);
+	    Tcl_AppendObjToObj(path, shlibext);
+#else
+	    Tcl_AppendObjToObj(path, shlibext);
 	    Tcl_AppendToObj(path, pqSuffixes[j], -1);
 #endif
 	    Tcl_IncrRefCount(path);

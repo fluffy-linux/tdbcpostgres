@@ -3,7 +3,7 @@ README: tdbcpostgres
     This is the 1.1.15 source distribution of the driver for Tcl
     Database Connectivity (TDBC) to access Postgres databases. TDBC and
     its drivers are available from a Fossil version control repository
-    at http://tdbc.tcl.tk/
+    at https://core.tcl-lang.org/tdbcpostgres
 
 RCS: @(#) $Id: $
 
@@ -13,9 +13,9 @@ This directory contains the source code, documentation, and test
 scripts for the Postgres driver for Tcl Database Connectivity. This
 module, plus TDBC itself, allow you to access Postgres databases using
 a standard application programming interface (API) from a Tcl script.
-This module is also available from http://tdbc.tcl.tk along with the
-source code of TDBC itself. A bug database and Wiki are available at
-the same location.
+This module is also available from https://core.tcl-lang.org/tdbcpostgres
+along with the source code of TDBC itself. A bug database and Wiki are
+available at the same location.
 
 Tdbc::postgres is a freely-available open source package.  You can do
 virtually anything you like with it, such as modifying it,
